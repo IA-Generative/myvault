@@ -6,7 +6,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { userApi, type AppListItem, type VaultEntry } from "../services/api";
-import { buildPopupData } from "./PopupCredentialsPage";
+import CredentialsOverlay from "../components/CredentialsOverlay";
 
 function StatusBadge({ app }: { app: AppListItem }) {
   if (!app.user_configured) {
@@ -43,7 +43,8 @@ export default function VaultPage() {
   const [apps, setApps] = useState<AppListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [popupBlocked, setPopupBlocked] = useState(false);
+  const [overlayApp, setOverlayApp] = useState<AppListItem | null>(null);
+  const [overlayCredentials, setOverlayCredentials] = useState<Record<string, string>>({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -60,52 +61,26 @@ export default function VaultPage() {
       if (!("entry_id" in entry)) return;
       const vaultEntry = entry as VaultEntry;
 
-      const popupData = buildPopupData(app, vaultEntry.values);
       const targetUrl = getAppTargetUrl(app, vaultEntry);
 
-      // 1. Open the credentials popup FIRST
-      const popupWidth = 380;
-      const popupHeight = 420;
-      const left = window.screen.width - popupWidth - 20;
-      const top = 60;
-      const popup = window.open(
-        `/popup/${app.friendly_slug}`,
-        `myvault-${app.friendly_slug}`,
-        `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes,alwaysRaised=yes`
+      // Filter to manual credentials only (login, password, app_url)
+      const manualKeys = new Set(
+        app.required_variables
+          .filter((v) => v.category === "manual" || v.category === "both")
+          .map((v) => v.key)
       );
+      const manualCreds: Record<string, string> = {};
+      for (const [key, val] of Object.entries(vaultEntry.values)) {
+        if (manualKeys.has(key) && val) manualCreds[key] = val;
+      }
 
-      if (!popup || popup.closed) {
-        setPopupBlocked(true);
-        // Still open the app even if popup is blocked
-        if (targetUrl) window.open(targetUrl, "_blank", "noopener,noreferrer");
-      } else {
-        setPopupBlocked(false);
+      // Show credentials overlay on this page
+      setOverlayApp(app);
+      setOverlayCredentials(manualCreds);
 
-        // Send credentials to popup
-        const sendData = () => {
-          popup.postMessage(
-            { type: "MYVAULT_CREDENTIALS", payload: popupData },
-            window.location.origin
-          );
-        };
-
-        const onMessage = (event: MessageEvent) => {
-          if (event.data?.type === "MYVAULT_POPUP_READY") {
-            sendData();
-            window.removeEventListener("message", onMessage);
-          }
-        };
-        window.addEventListener("message", onMessage);
-        setTimeout(sendData, 500);
-        setTimeout(sendData, 1500);
-
-        // 2. Open the target app AFTER the popup (so popup is behind)
-        // 3. Then bring the popup back to the front
-        setTimeout(() => {
-          if (targetUrl) window.open(targetUrl, "_blank", "noopener,noreferrer");
-          // Bring popup to front after the app tab has opened
-          setTimeout(() => popup.focus(), 300);
-        }, 200);
+      // Open the target app in background tab
+      if (targetUrl) {
+        window.open(targetUrl, "_blank", "noopener,noreferrer");
       }
     } catch {
       // silently fail
@@ -124,35 +99,6 @@ export default function VaultPage() {
     <>
       <h1>Mes applications</h1>
 
-      {popupBlocked && (
-        <div className="fr-alert fr-alert--warning fr-mb-2w">
-          <h3 className="fr-alert__title">Fenêtre bloquée par le navigateur</h3>
-          <p>
-            La fenêtre d'identifiants a été bloquée. Pour que le bouton <strong>Ouvrir</strong> fonctionne,
-            autorisez les pop-ups pour ce site :
-          </p>
-          <ul style={{ margin: "0.5rem 0", paddingLeft: "1.5rem", fontSize: "0.875rem" }}>
-            <li>
-              <strong>Chrome</strong> : cliquez sur l'icône bloquée dans la barre d'adresse,
-              ou allez dans <em>Paramètres &gt; Confidentialité &gt; Paramètres des sites &gt; Pop-ups</em> et
-              ajoutez <code>{window.location.origin}</code>
-            </li>
-            <li>
-              <strong>Firefox</strong> : cliquez sur le bandeau de notification en haut de page,
-              ou allez dans <em>Paramètres &gt; Vie privée &gt; Permissions &gt; Pop-ups &gt; Exceptions</em> et
-              ajoutez <code>{window.location.origin}</code>
-            </li>
-            <li>
-              <strong>Edge</strong> : cliquez sur l'icône bloquée dans la barre d'adresse,
-              ou allez dans <em>Paramètres &gt; Cookies et autorisations &gt; Pop-ups</em> et
-              ajoutez <code>{window.location.origin}</code>
-            </li>
-          </ul>
-          <button className="fr-btn fr-btn--sm fr-btn--tertiary" onClick={() => setPopupBlocked(false)}>
-            Fermer
-          </button>
-        </div>
-      )}
       <p className="fr-text--lg fr-mb-3w">
         Configurez vos accès puis cliquez sur <strong>Ouvrir</strong> pour
         accéder à l'application avec vos identifiants à portée de main.
@@ -214,6 +160,17 @@ export default function VaultPage() {
         </div>
       )}
 
+      {overlayApp && Object.keys(overlayCredentials).length > 0 && (
+        <CredentialsOverlay
+          appName={overlayApp.name}
+          iconUrl={overlayApp.icon_url}
+          credentials={overlayCredentials}
+          onClose={() => {
+            setOverlayApp(null);
+            setOverlayCredentials({});
+          }}
+        />
+      )}
     </>
   );
 }
