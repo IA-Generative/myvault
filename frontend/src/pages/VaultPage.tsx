@@ -1,11 +1,12 @@
 /**
- * User vault page — "Mes identifiants"
- * Shows a clear table of all applications with status and action buttons.
+ * User vault page — "Applications"
+ * Table with status, configure, and "Ouvrir" button with credentials overlay.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { userApi, type AppListItem } from "../services/api";
+import { userApi, type AppListItem, type VaultEntry } from "../services/api";
+import CredentialsOverlay from "../components/CredentialsOverlay";
 
 function StatusBadge({ app }: { app: AppListItem }) {
   if (!app.user_configured) {
@@ -20,7 +21,16 @@ function StatusBadge({ app }: { app: AppListItem }) {
   if (app.check_status === "error") {
     return <span className="fr-badge fr-badge--sm fr-badge--error">Erreur</span>;
   }
-  return <span className="fr-badge fr-badge--sm fr-badge--info">Actif — non testé</span>;
+  return <span className="fr-badge fr-badge--sm fr-badge--info">Actif</span>;
+}
+
+function getAppTargetUrl(app: AppListItem, entry: VaultEntry): string | null {
+  for (const v of app.required_variables) {
+    if (v.var_type === "url" && entry.values[v.key]) {
+      return entry.values[v.key];
+    }
+  }
+  return null;
 }
 
 export default function VaultPage() {
@@ -28,6 +38,9 @@ export default function VaultPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  const [overlayApp, setOverlayApp] = useState<AppListItem | null>(null);
+  const [overlayCredentials, setOverlayCredentials] = useState<Record<string, string> | null>(null);
 
   useEffect(() => {
     userApi
@@ -37,24 +50,38 @@ export default function VaultPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return <p>Chargement...</p>;
-  }
+  const handleOpen = useCallback(async (app: AppListItem) => {
+    try {
+      const entry = await userApi.getMyEntry(app.friendly_slug);
+      if (!("entry_id" in entry)) return;
+      const vaultEntry = entry as VaultEntry;
+
+      const targetUrl = getAppTargetUrl(app, vaultEntry);
+      if (targetUrl) {
+        window.open(targetUrl, "_blank", "noopener,noreferrer");
+      }
+
+      setOverlayApp(app);
+      setOverlayCredentials(vaultEntry.values);
+    } catch {
+      // silently fail
+    }
+  }, []);
+
+  if (loading) return <p>Chargement...</p>;
 
   if (error) {
-    return (
-      <div className="fr-alert fr-alert--error">
-        <p>{error}</p>
-      </div>
-    );
+    return <div className="fr-alert fr-alert--error"><p>{error}</p></div>;
   }
+
+  const canOpen = (app: AppListItem) => app.user_configured && app.user_enabled;
 
   return (
     <>
       <h1>Mes identifiants</h1>
       <p className="fr-text--lg fr-mb-3w">
-        Configurez vos identifiants pour chaque application.
-        Vos données sont chiffrées et accessibles uniquement par vous.
+        Configurez vos identifiants puis cliquez sur <strong>Ouvrir</strong> pour
+        accéder à l'application avec vos credentials à portée de main.
       </p>
 
       {apps.length === 0 ? (
@@ -73,7 +100,7 @@ export default function VaultPage() {
                 <th>Application</th>
                 <th>Description</th>
                 <th>Statut</th>
-                <th>Action</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -89,28 +116,40 @@ export default function VaultPage() {
                   <td>
                     <StatusBadge app={app} />
                   </td>
-                  <td>
-                    {app.user_configured ? (
-                      <button
-                        className="fr-btn fr-btn--sm fr-btn--secondary"
-                        onClick={() => navigate(`/app/${app.friendly_slug}`)}
-                      >
-                        Modifier
-                      </button>
-                    ) : (
-                      <button
-                        className="fr-btn fr-btn--sm"
-                        onClick={() => navigate(`/app/${app.friendly_slug}`)}
-                      >
-                        Configurer
-                      </button>
-                    )}
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    <button
+                      className={`fr-btn fr-btn--sm ${canOpen(app) ? "" : ""}`}
+                      onClick={() => handleOpen(app)}
+                      disabled={!canOpen(app)}
+                      title={canOpen(app) ? "Ouvrir l'application et afficher les credentials" : "Configurez d'abord vos identifiants"}
+                    >
+                      Ouvrir
+                    </button>
+                    {" "}
+                    <button
+                      className="fr-btn fr-btn--sm fr-btn--tertiary"
+                      onClick={() => navigate(`/app/${app.friendly_slug}`)}
+                    >
+                      {app.user_configured ? "Modifier" : "Configurer"}
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {overlayApp && overlayCredentials && (
+        <CredentialsOverlay
+          appName={overlayApp.name}
+          iconUrl={overlayApp.icon_url}
+          credentials={overlayCredentials}
+          onClose={() => {
+            setOverlayApp(null);
+            setOverlayCredentials(null);
+          }}
+        />
       )}
     </>
   );
