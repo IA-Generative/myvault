@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import { Header } from "@codegouvfr/react-dsfr/Header";
 import { Footer } from "@codegouvfr/react-dsfr/Footer";
@@ -7,8 +8,36 @@ import AdminPage from "./pages/AdminPage";
 import AdminAppFormPage from "./pages/AdminAppFormPage";
 import BridgePage from "./pages/BridgePage";
 import GuidePage from "./pages/GuidePage";
+import { userApi, type UserProfile } from "./services/api";
 
 function App() {
+  const [user, setUser] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    userApi.getProfile().then(setUser).catch(() => {});
+  }, []);
+
+  const quickAccessItems = user
+    ? [
+        {
+          iconId: "ri-account-circle-line" as const,
+          text: user.name || user.email || user.user_id,
+          linkProps: { href: "#" },
+        },
+        {
+          iconId: "ri-logout-box-r-line" as const,
+          text: "Se déconnecter",
+          linkProps: { href: "/" },
+        },
+      ]
+    : [
+        {
+          iconId: "ri-login-box-line" as const,
+          text: "Se connecter",
+          linkProps: { href: "/" },
+        },
+      ];
+
   return (
     <>
       <Header
@@ -21,10 +50,13 @@ function App() {
         }
         homeLinkProps={{ href: "/", title: "MyVault - Accueil" }}
         serviceTitle="MyVault"
-        serviceTagline="Coffre-fort de credentials"
+        serviceTagline="Mon coffre-fort sécurisé"
+        quickAccessItems={quickAccessItems}
         navigation={[
           { text: "Mon coffre-fort", linkProps: { href: "/" } },
-          { text: "Administration", linkProps: { href: "/admin" } },
+          ...(user?.is_admin
+            ? [{ text: "Administration", linkProps: { href: "/admin" } }]
+            : []),
           { text: "Aide", linkProps: { href: "/guide" } },
         ]}
       />

@@ -11,6 +11,19 @@ from app.services import vault_service
 router = APIRouter(prefix="/api/v1/me", tags=["User Vault"])
 
 
+@router.get("/profile")
+async def get_my_profile(
+    user: AuthenticatedUser = Depends(get_current_user),
+):
+    """Return the authenticated user's identity."""
+    return {
+        "user_id": user.user_id,
+        "email": user.email,
+        "name": user.name,
+        "is_admin": user.is_admin,
+    }
+
+
 @router.get("/apps")
 async def list_my_apps(
     user: AuthenticatedUser = Depends(get_current_user),

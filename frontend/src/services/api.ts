@@ -57,6 +57,13 @@ export interface VaultEntry {
   updated_at: string;
 }
 
+export interface UserProfile {
+  user_id: string;
+  email: string;
+  name: string;
+  is_admin: boolean;
+}
+
 export interface CheckResult {
   status: string;
   detail: string;
@@ -84,6 +91,8 @@ export interface AdminApp {
 // --- User Vault API ---
 
 export const userApi = {
+  getProfile: () => request<UserProfile>("/me/profile"),
+
   getMyApps: () => request<AppListItem[]>("/me/apps"),
 
   getMyEntry: (appSlug: string) => request<VaultEntry | { values: Record<string, string>; configured: false }>(`/me/apps/${appSlug}/entries`),

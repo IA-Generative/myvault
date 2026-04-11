@@ -33,32 +33,66 @@ export default function VaultPage() {
     );
   }
 
+  const configured = apps.filter((a) => a.user_configured);
+  const unconfigured = apps.filter((a) => !a.user_configured);
+
   return (
     <>
       <h1>Mon coffre-fort</h1>
       <p className="fr-text--lg">
         Gérez vos identifiants pour chaque application connectée.
+        Cliquez sur une application pour configurer vos accès.
       </p>
 
       {apps.length === 0 ? (
         <div className="fr-callout">
-          <h3 className="fr-callout__title">Aucune application configurée</h3>
+          <h3 className="fr-callout__title">Aucune application disponible</h3>
           <p className="fr-callout__text">
             Les applications apparaîtront ici dès qu'un administrateur les aura ajoutées,
             ou qu'un outil en aura besoin.
           </p>
         </div>
       ) : (
-        <div className="fr-grid-row fr-grid-row--gutters">
-          {apps.map((app) => (
-            <div className="fr-col-12 fr-col-md-6 fr-col-lg-4" key={app.id}>
-              <AppCard
-                app={app}
-                onClick={() => navigate(`/app/${app.friendly_slug}`)}
-              />
-            </div>
-          ))}
-        </div>
+        <>
+          {configured.length > 0 && (
+            <>
+              <h2 className="fr-mt-3w">
+                Mes applications configurées ({configured.length})
+              </h2>
+              <div className="fr-grid-row fr-grid-row--gutters">
+                {configured.map((app) => (
+                  <div className="fr-col-12 fr-col-md-6 fr-col-lg-4" key={app.id}>
+                    <AppCard
+                      app={app}
+                      onClick={() => navigate(`/app/${app.friendly_slug}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {unconfigured.length > 0 && (
+            <>
+              <h2 className="fr-mt-3w">
+                Applications à configurer ({unconfigured.length})
+              </h2>
+              <p className="fr-text--sm" style={{ color: "var(--text-mention-grey)" }}>
+                Cliquez sur une application pour saisir vos identifiants.
+              </p>
+              <div className="fr-grid-row fr-grid-row--gutters">
+                {unconfigured.map((app) => (
+                  <div className="fr-col-12 fr-col-md-6 fr-col-lg-4" key={app.id}>
+                    <AppCard
+                      app={app}
+                      onClick={() => navigate(`/app/${app.friendly_slug}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
       )}
     </>
   );
