@@ -36,8 +36,14 @@ function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleLogin = useCallback(async () => {
-    await login();
+  const [loginError, setLoginError] = useState("");
+
+  const handleLogin = useCallback(() => {
+    setLoginError("");
+    login().catch((err) => {
+      console.error("Login failed:", err);
+      setLoginError(err?.message || "Erreur de connexion");
+    });
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -84,8 +90,13 @@ function App() {
             (clés API, tokens, mots de passe) sur toutes vos applications.
           </p>
           <button className="fr-btn fr-btn--lg" onClick={handleLogin}>
-            Se connecter avec Keycloak
+            Se connecter
           </button>
+          {loginError && (
+            <div className="fr-alert fr-alert--error fr-mt-2w" style={{ textAlign: "left" }}>
+              <p>{loginError}</p>
+            </div>
+          )}
         </div>
         <Footer
           accessibility="partially compliant"
