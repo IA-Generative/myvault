@@ -17,12 +17,10 @@ function App() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Handle OIDC callback (code in URL after Keycloak redirect)
     if (location.search.includes("code=") || location.search.includes("state=")) {
       handleCallback()
         .then((u) => {
           setUser(u);
-          // Clean URL
           navigate(location.pathname, { replace: true });
         })
         .catch(() => {
@@ -60,7 +58,7 @@ function App() {
     );
   }
 
-  // Not logged in — show login page
+  // Not logged in
   if (!user || user.expired) {
     return (
       <>
@@ -83,8 +81,8 @@ function App() {
         <div className="fr-container fr-my-4w" style={{ textAlign: "center", padding: "4rem 0" }}>
           <h1>MyVault</h1>
           <p className="fr-text--lg fr-mb-3w">
-            Votre coffre-fort sécurisé pour gérer vos identifiants
-            (clés API, tokens, mots de passe) sur toutes vos applications.
+            Gérez vos identifiants (clés API, tokens, mots de passe)
+            pour toutes vos applications, en toute sécurité.
           </p>
           <button className="fr-btn fr-btn--lg" onClick={handleLogin}>
             Se connecter
@@ -104,11 +102,14 @@ function App() {
     );
   }
 
+  const isUserSection = location.pathname === "/" || location.pathname.startsWith("/app/") || location.pathname.startsWith("/bridge/");
+  const isAdminSection = location.pathname.startsWith("/admin");
+
   return (
     <>
       <Header
         brandTop={<>RÉPUBLIQUE<br />FRANÇAISE</>}
-        homeLinkProps={{ href: "/", title: "MyVault - Accueil" }}
+        homeLinkProps={{ href: "/", title: "MyVault" }}
         serviceTitle="MyVault"
         serviceTagline="Mon coffre-fort sécurisé"
         quickAccessItems={[
@@ -127,8 +128,8 @@ function App() {
           },
         ]}
         navigation={[
-          { text: "Mes applications", linkProps: { href: "/" }, isActive: location.pathname === "/" || location.pathname.startsWith("/app/") || location.pathname.startsWith("/bridge/") },
-          { text: "Administration", linkProps: { href: "/admin" }, isActive: location.pathname.startsWith("/admin") },
+          { text: "Mes identifiants", linkProps: { href: "/" }, isActive: isUserSection },
+          { text: "Administration", linkProps: { href: "/admin" }, isActive: isAdminSection },
           { text: "Aide", linkProps: { href: "/guide" }, isActive: location.pathname === "/guide" },
         ]}
       />
