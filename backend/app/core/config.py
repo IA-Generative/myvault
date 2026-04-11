@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     myvault_dev_mode: bool = False
     myvault_dev_user_id: str = "dev-user-001"
     myvault_dev_user_email: str = "dev@example.com"
-    myvault_dev_user_name: str = "Développeur Local"
+    myvault_dev_user_name: str = "Utilisateur"
     myvault_dev_admin: bool = True
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
