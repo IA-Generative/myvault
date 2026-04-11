@@ -79,7 +79,10 @@ export default function VaultPage() {
             <tbody>
               {apps.map((app) => (
                 <tr key={app.id}>
-                  <td>
+                  <td style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    {app.icon_url && (
+                      <img src={app.icon_url} alt="" style={{ width: 20, height: 20 }} />
+                    )}
                     <strong>{app.name}</strong>
                   </td>
                   <td>{app.description}</td>

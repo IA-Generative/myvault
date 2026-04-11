@@ -175,6 +175,7 @@ async def import_keycloak(
         # Parse myvault-specific attributes
         variables_json = client.attributes.get("myvault.variables", "[]")
         check_endpoint = client.attributes.get("myvault.check_endpoint", "")
+        icon_url = client.attributes.get("myvault.icon_url", "")
 
         try:
             variables = json.loads(variables_json)
@@ -198,6 +199,7 @@ async def import_keycloak(
             client_id=client.clientId,
             client_secret=client.secret,
             name=client.name or client.clientId,
+            icon_url=icon_url,
             friendly_slug=slug,
             check_connection_endpoint=check_endpoint,
             required_variables=var_defs,
@@ -234,6 +236,7 @@ async def export_keycloak(db: AsyncSession) -> dict:
             "attributes": {
                 "myvault.variables": json.dumps(variables),
                 "myvault.check_endpoint": app.check_connection_endpoint,
+                "myvault.icon_url": app.icon_url,
             },
         })
     return {"clients": clients}
