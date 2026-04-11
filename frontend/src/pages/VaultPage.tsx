@@ -6,7 +6,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { userApi, type AppListItem, type VaultEntry } from "../services/api";
-import CredentialsOverlay from "../components/CredentialsOverlay";
 
 function StatusBadge({ app }: { app: AppListItem }) {
   if (!app.user_configured) {
@@ -45,9 +44,6 @@ export default function VaultPage() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const [overlayApp, setOverlayApp] = useState<AppListItem | null>(null);
-  const [overlayCredentials, setOverlayCredentials] = useState<Record<string, string> | null>(null);
-
   useEffect(() => {
     userApi
       .getMyApps()
@@ -62,13 +58,22 @@ export default function VaultPage() {
       if (!("entry_id" in entry)) return;
       const vaultEntry = entry as VaultEntry;
 
+      // Open the target app in a new tab
       const targetUrl = getAppTargetUrl(app, vaultEntry);
       if (targetUrl) {
         window.open(targetUrl, "_blank", "noopener,noreferrer");
       }
 
-      setOverlayApp(app);
-      setOverlayCredentials(vaultEntry.values);
+      // Open a small credentials popup window
+      const popupWidth = 380;
+      const popupHeight = 420;
+      const left = window.screen.width - popupWidth - 20;
+      const top = 60;
+      window.open(
+        `/popup/${app.friendly_slug}`,
+        `myvault-${app.friendly_slug}`,
+        `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
     } catch {
       // silently fail
     }
@@ -146,17 +151,6 @@ export default function VaultPage() {
         </div>
       )}
 
-      {overlayApp && overlayCredentials && (
-        <CredentialsOverlay
-          appName={overlayApp.name}
-          iconUrl={overlayApp.icon_url}
-          credentials={overlayCredentials}
-          onClose={() => {
-            setOverlayApp(null);
-            setOverlayCredentials(null);
-          }}
-        />
-      )}
     </>
   );
 }

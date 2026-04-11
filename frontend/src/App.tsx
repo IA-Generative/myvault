@@ -8,6 +8,7 @@ import AppDetailPage from "./pages/AppDetailPage";
 import AdminPage from "./pages/AdminPage";
 import AdminAppFormPage from "./pages/AdminAppFormPage";
 import BridgePage from "./pages/BridgePage";
+import PopupCredentialsPage from "./pages/PopupCredentialsPage";
 import GuidePage from "./pages/GuidePage";
 import { login, logout, getUser, handleCallback, type User } from "./services/auth";
 
@@ -50,6 +51,15 @@ function App() {
   }, []);
 
   const userName = user?.profile?.name || user?.profile?.preferred_username || user?.profile?.email || "";
+
+  // Popup route — renders standalone, no header/footer
+  if (location.pathname.startsWith("/popup/")) {
+    return (
+      <Routes>
+        <Route path="/popup/:appSlug" element={<PopupCredentialsPage />} />
+      </Routes>
+    );
+  }
 
   if (loading) {
     return (
