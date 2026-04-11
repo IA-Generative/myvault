@@ -6,6 +6,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { userApi, type AppListItem, type VaultEntry } from "../services/api";
+import { buildPopupData } from "./PopupCredentialsPage";
 
 function StatusBadge({ app }: { app: AppListItem }) {
   if (!app.user_configured) {
@@ -65,6 +66,9 @@ export default function VaultPage() {
         window.open(targetUrl, "_blank", "noopener,noreferrer");
       }
 
+      // Build credentials data for the popup
+      const popupData = buildPopupData(app, vaultEntry.values);
+
       // Open a small credentials popup window
       const popupWidth = 380;
       const popupHeight = 420;
@@ -81,6 +85,27 @@ export default function VaultPage() {
         setPopupBlocked(true);
       } else {
         setPopupBlocked(false);
+
+        // Send credentials to popup once it's ready
+        const sendData = () => {
+          popup.postMessage(
+            { type: "MYVAULT_CREDENTIALS", payload: popupData },
+            window.location.origin
+          );
+        };
+
+        // Listen for popup ready signal
+        const onMessage = (event: MessageEvent) => {
+          if (event.data?.type === "MYVAULT_POPUP_READY") {
+            sendData();
+            window.removeEventListener("message", onMessage);
+          }
+        };
+        window.addEventListener("message", onMessage);
+
+        // Also try sending after a short delay (fallback)
+        setTimeout(sendData, 500);
+        setTimeout(sendData, 1500);
       }
     } catch {
       // silently fail

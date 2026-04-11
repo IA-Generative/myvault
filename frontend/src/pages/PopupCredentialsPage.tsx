@@ -1,18 +1,28 @@
 /**
- * Popup credentials page — opened in a small floating window when
- * user clicks "Ouvrir" on an application.
+ * Popup credentials page — opened in a small floating window.
  *
- * Displays credentials with copy buttons in a compact, semi-transparent layout.
- * Stays visible on top of the target application in the other tab.
+ * Receives credentials from the parent window via postMessage.
+ * Shows only manual credentials (login, password) with copy buttons.
  *
  * URL: /popup/:appSlug
  */
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
-import { userApi, type AppListItem, type VaultEntry } from "../services/api";
 
-function CopyButton({ value, label }: { value: string; label?: string }) {
+interface CredentialField {
+  key: string;
+  label: string;
+  value: string;
+  secret: boolean;
+}
+
+interface PopupData {
+  appName: string;
+  iconUrl: string;
+  credentials: CredentialField[];
+}
+
+function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -23,39 +33,31 @@ function CopyButton({ value, label }: { value: string; label?: string }) {
 
   return (
     <button onClick={handleCopy} style={styles.copyBtn}>
-      {copied ? "Copié !" : label || "Copier"}
+      {copied ? "Copié !" : "Copier"}
     </button>
   );
 }
 
 export default function PopupCredentialsPage() {
-  const { appSlug } = useParams<{ appSlug: string }>();
-  const [app, setApp] = useState<AppListItem | null>(null);
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [error, setError] = useState("");
+  const [data, setData] = useState<PopupData | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!appSlug) return;
-    Promise.all([
-      userApi.getMyApps(),
-      userApi.getMyEntry(appSlug),
-    ]).then(([apps, entry]) => {
-      const found = apps.find((a) => a.friendly_slug === appSlug);
-      if (found) setApp(found);
-      if ("entry_id" in entry) {
-        setValues((entry as VaultEntry).values);
-      }
-    }).catch((e) => setError(e.message));
-
-    // Set window title
     document.title = "MyVault — Identifiants";
-  }, [appSlug]);
 
-  const isSecret = (key: string) =>
-    app?.required_variables.some(
-      (v) => v.key === key && ["api_key", "secret", "password", "oauth_token", "login", "certificate"].includes(v.var_type)
-    ) ?? /token|password|secret|key/i.test(key);
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "MYVAULT_CREDENTIALS") {
+        setData(event.data.payload as PopupData);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    // Tell parent we're ready
+    window.opener?.postMessage({ type: "MYVAULT_POPUP_READY" }, "*");
+
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const toggleReveal = (key: string) => {
     setRevealed((prev) => {
@@ -66,65 +68,58 @@ export default function PopupCredentialsPage() {
     });
   };
 
-  const getLabel = (key: string) =>
-    app?.required_variables.find((v) => v.key === key)?.label || key;
-
-  if (error) {
-    return <div style={styles.container}><p style={{ color: "#CE0500" }}>{error}</p></div>;
+  if (!data) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.header}>
+          <strong>MyVault</strong>
+        </div>
+        <div style={styles.body}>
+          <p style={{ color: "#666", fontSize: 12, textAlign: "center", marginTop: 20 }}>
+            Chargement des identifiants...
+          </p>
+        </div>
+      </div>
+    );
   }
-
-  if (!app) {
-    return <div style={styles.container}><p>Chargement...</p></div>;
-  }
-
-  // Only show manual credentials (login, password, app_url) — not API tokens
-  const manualKeys = new Set(
-    app.required_variables
-      .filter((v) => v.category === "manual" || v.category === "both")
-      .map((v) => v.key)
-  );
-  const entries = Object.entries(values).filter(
-    ([key, v]) => v && manualKeys.has(key)
-  );
 
   return (
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        {app.icon_url && <img src={app.icon_url} alt="" style={{ width: 20, height: 20 }} />}
-        <strong>{app.name}</strong>
+        {data.iconUrl && <img src={data.iconUrl} alt="" style={{ width: 20, height: 20 }} />}
+        <strong>{data.appName}</strong>
         <span style={styles.badge}>MyVault</span>
       </div>
 
       {/* Credentials */}
       <div style={styles.body}>
-        {entries.length === 0 ? (
-          <p style={{ color: "#666", fontSize: 12 }}>Aucun identifiant configuré</p>
+        {data.credentials.length === 0 ? (
+          <p style={{ color: "#666", fontSize: 12 }}>Aucun identifiant manuel configuré</p>
         ) : (
-          entries.map(([key, value]) => {
-            const secret = isSecret(key);
-            const shown = revealed.has(key);
-            const displayValue = secret && !shown
-              ? "\u2022".repeat(Math.min(value.length, 16))
-              : value;
+          data.credentials.map((cred) => {
+            const shown = revealed.has(cred.key);
+            const displayValue = cred.secret && !shown
+              ? "\u2022".repeat(Math.min(cred.value.length, 16))
+              : cred.value;
 
             return (
-              <div key={key} style={styles.row}>
-                <div style={styles.rowLabel}>{getLabel(key)}</div>
+              <div key={cred.key} style={styles.row}>
+                <div style={styles.rowLabel}>{cred.label}</div>
                 <div style={styles.rowValue}>
                   <span style={{
                     ...styles.valueText,
-                    fontFamily: secret ? "monospace" : "inherit",
+                    fontFamily: cred.secret ? "monospace" : "inherit",
                   }}>
                     {displayValue}
                   </span>
                   <div style={styles.actions}>
-                    {secret && (
-                      <button onClick={() => toggleReveal(key)} style={styles.smallBtn}>
+                    {cred.secret && (
+                      <button onClick={() => toggleReveal(cred.key)} style={styles.smallBtn}>
                         {shown ? "Masquer" : "Voir"}
                       </button>
                     )}
-                    <CopyButton value={value} />
+                    <CopyButton value={cred.value} />
                   </div>
                 </div>
               </div>
@@ -139,6 +134,34 @@ export default function PopupCredentialsPage() {
       </div>
     </div>
   );
+}
+
+const SECRET_TYPES = new Set(["password", "login", "api_key", "secret", "oauth_token", "certificate"]);
+
+// Called by VaultPage to build the popup data
+export function buildPopupData(
+  app: { name: string; icon_url: string; required_variables: { key: string; label: string; var_type: string; category: string }[] },
+  values: Record<string, string>
+): PopupData {
+  const credentials: CredentialField[] = [];
+
+  for (const v of app.required_variables) {
+    if (v.category !== "manual" && v.category !== "both") continue;
+    const value = values[v.key];
+    if (!value) continue;
+    credentials.push({
+      key: v.key,
+      label: v.label,
+      value,
+      secret: SECRET_TYPES.has(v.var_type),
+    });
+  }
+
+  return {
+    appName: app.name,
+    iconUrl: app.icon_url,
+    credentials,
+  };
 }
 
 const styles: Record<string, React.CSSProperties> = {
