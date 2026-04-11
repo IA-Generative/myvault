@@ -1,4 +1,4 @@
-# MyVault
+# MyVault <sup>Beta</sup>
 
 [![CI](https://github.com/IA-Generative/myvault/actions/workflows/ci.yml/badge.svg)](https://github.com/IA-Generative/myvault/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -11,87 +11,103 @@ MyVault permet aux agents de l'État de stocker, gérer et partager leurs identi
 
 ## Démarrage rapide
 
+**Prérequis** : [owuicore-main](https://github.com/IA-Generative/owuicore-main) doit tourner (PostgreSQL + Keycloak partagés).
+
 ```bash
 git clone https://github.com/IA-Generative/myvault.git
 cd myvault
 cp .env.example .env
-make dev        # ou: docker compose -f deploy/docker/docker-compose.yml up -d
-# → http://localhost:3000 (frontend)
+docker compose -f deploy/docker/docker-compose.yml up -d
+# → http://localhost:8085 (frontend)
 # → http://localhost:8000/api/docs (API docs)
+# Login : user1 / user1password (via Keycloak)
 ```
+
+La base `myvault` est créée automatiquement dans le PostgreSQL partagé d'owuicore-main.
+Le client OIDC `myvault` (public, PKCE) est déjà configuré dans le realm `openwebui`.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│          Utilisateur (navigateur, SSO)           │
-└───────────────┬─────────────────────────────────┘
-                │ OIDC token
-                ▼
-┌─────────────────────────────────────────────────┐
-│         MyVault Frontend (React + DSFR)          │
-└───────────────┬─────────────────────────────────┘
-                │ API REST (Bearer token)
-                ▼
-┌─────────────────────────────────────────────────┐
-│          MyVault Backend (FastAPI)                │
-│  Auth │ Vault Service │ App Registry │ Bridge    │
-│              │                                   │
-│     Secret Engine (AES-256-GCM + HKDF)          │
-│              │                                   │
-│     PostgreSQL (secrets chiffrés)                │
-└─────────────────────────────────────────────────┘
+owuicore-main (réseau Docker owui-net)
+├── PostgreSQL ─── base "myvault" (partagée)
+├── Keycloak ───── realm "openwebui", client "myvault" (PKCE)
+│
+├── MyVault Frontend (:8085) ── React + DSFR ── OIDC auth
+├── MyVault Backend  (:8000) ── FastAPI ── AES-256-GCM ── HKDF
+│
+└── OpenWebUI, Grist, iObeya, Tchap, Mattermost...
 ```
 
-Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le détail complet.
+Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) et [ADR-001 (choix du moteur de secrets)](docs/adr/ADR-001-choix-moteur-secrets.md).
 
 ## Fonctionnalités
 
-- **Coffre-fort personnel** : chaque utilisateur gère ses propres credentials
-- **Chiffrement fort** : AES-256-GCM avec clé dérivée par utilisateur (HKDF-SHA256)
-- **SSO Keycloak** : authentification OIDC, rôles admin
-- **IHM DSFR** : conforme au Design System de l'État Français, accessible (RGAA)
-- **API REST complète** : utilisateur, admin, machine-to-machine
+### Pour l'utilisateur
+- **Mes applications** : tableau des apps avec statut, bouton **Configurer** / **Ouvrir**
+- **Accès manuel** : login + mot de passe pour se connecter via le navigateur
+- **Accès API** : tokens et clés pour que les agents IA accèdent aux données en votre nom
+- **Bouton Ouvrir** : ouvre l'app + affiche les credentials en split-screen (popup latérale)
+- **Coffre personnel** : ajout libre de logins/mots de passe (gestionnaire de mots de passe)
+- **Chiffrement AES-256-GCM** : clé dérivée par utilisateur, personne d'autre ne peut lire vos secrets
+
+### Pour l'administrateur
+- **Gestion des applications** : CRUD, import/export Keycloak JSON
+- **Import rapide** : 5 applications d'exemple en un clic (Grist, GitHub, iObeya, Tchap, Mattermost)
+- **Variables typées** : 14 types (text, url, api_key, password, login, etc.) avec catégorie manual/api
+- **Endpoints API pré-remplis** : les URLs connues sont en lecture seule
+- **Test API** : vérification de connectivité côté serveur (réseau Docker/K8s)
+
+### Intégration
+- **SSO Keycloak** : OIDC public avec PKCE, rôle client `myvault-admin`
+- **SDK Python** : `myvault-client` pour tools OpenWebUI
 - **Auto-enrôlement** : les tools s'enregistrent automatiquement
-- **Test de connexion** : vérification en un clic
-- **Bridge multi-format** : export/import en JSON, .env, YAML
-- **SDK Python** : `myvault-client` pour intégration dans les tools OpenWebUI
-- **Widget embarquable** : overlay pour applications tierces
-- **Extension navigateur** : MyVault Assistant (Chrome + Firefox)
-- **Import/Export Keycloak** : format compatible
+- **Bridge** : export/import en JSON, .env, YAML
+- **Widget embarquable** et **extension navigateur** (Manifest V3)
+
+## Applications pré-configurées
+
+| App | Accès manuel | Accès API |
+|-----|-------------|-----------|
+| Grist | URL, login, mot de passe | Clé API, URL API, ID document |
+| GitHub | URL, login, mot de passe | PAT (scopes repo/project/read:org), organisation, URL API |
+| iObeya | URL, login, mot de passe | Token JWT, URL API, room ID, types de cartes |
+| Tchap | URL, email, mot de passe | Homeserver URL, token Matrix, room ID |
+| Mattermost | URL, login, mot de passe | URL API, bot token, channel ID |
 
 ## Structure du projet
 
 ```
 myvault/
 ├── backend/           # API FastAPI + chiffrement + auth
-├── frontend/          # React + DSFR
+├── frontend/          # React + DSFR (Vite + TypeScript)
 ├── sdk/               # Package Python myvault-client
 ├── browser-extension/ # Extension navigateur (Manifest V3)
 ├── widget/            # Widget overlay embarquable
-├── deploy/            # Docker Compose + Kubernetes
-├── tests/             # E2E, load, plans de tests manuels
-└── docs/              # Documentation complète
+├── deploy/            # Docker Compose + Kubernetes (Kustomize)
+├── tests/             # E2E, charge (Locust), plans manuels
+└── docs/              # Architecture, ADR, guides, exemples Keycloak
 ```
 
 ## Documentation
 
 - [Architecture technique](docs/ARCHITECTURE.md)
+- [ADR-001 : Choix du moteur de secrets](docs/adr/ADR-001-choix-moteur-secrets.md)
 - [Spécification fonctionnelle](docs/FUNCTIONAL_SPEC.md)
 - [Guide utilisateur](docs/USER_GUIDE.md)
 - [Guide d'intégration](docs/INTEGRATION_GUIDE.md)
-- [Référence API](http://localhost:8000/api/docs) (OpenAPI auto-générée)
+- [Prompt d'intégration pour tools](docs/PROMPT_INTEGRATION_TOOL.md)
+- [Client Keycloak (import)](docs/keycloak-client-myvault.json)
+- [Applications d'exemple (import)](docs/sample-apps-import.json)
 
 ## Commandes utiles
 
 ```bash
 make help              # Voir toutes les commandes
-make dev               # Démarrer l'environnement complet
+make dev               # Docker Compose up (owuicore-main requis)
 make test              # Lancer tous les tests
 make lint              # Vérifier le code
-make docker-up         # Docker Compose up
-make docker-down       # Docker Compose down
-make db-migrate        # Appliquer les migrations
+make docker-down       # Arrêter les services
 ```
 
 ## Contribuer
