@@ -17,6 +17,7 @@ class VariableDefinition(BaseModel):
     description: str = ""
     default: str = Field(default="", alias="default_value")
     choices: list[str] | None = None
+    category: str = "both"  # "manual", "api", or "both"
 
     model_config = {"populate_by_name": True}
 

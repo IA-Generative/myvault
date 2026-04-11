@@ -13,38 +13,15 @@ import VariableField from "../components/VariableField";
 import ConnectionChecker from "../components/ConnectionChecker";
 import { userApi, type AppListItem, type VariableDefinition } from "../services/api";
 
-const API_TYPES = new Set(["api_key", "secret", "oauth_token", "certificate"]);
-const MANUAL_TYPES = new Set(["login", "password", "email"]);
-const API_KEY_PATTERNS = /api|token|endpoint|secret|key|client/i;
-
-function classifyVariable(v: VariableDefinition): "manual" | "api" {
-  // app_url is always manual (the website to open in browser)
-  if (v.key === "app_url") return "manual";
-  // Explicit API types
-  if (API_TYPES.has(v.var_type)) return "api";
-  // Explicit manual types
-  if (MANUAL_TYPES.has(v.var_type)) return "manual";
-  // URLs: classify by key name
-  if (v.var_type === "url") {
-    return API_KEY_PATTERNS.test(v.key) ? "api" : "manual";
-  }
-  // text, number, etc. — classify by key name
-  return API_KEY_PATTERNS.test(v.key) ? "api" : "manual";
-}
-
 function isReadOnlyField(v: VariableDefinition): boolean {
-  // API endpoints with a known default value are read-only
-  if (v.var_type === "url" && v.key !== "app_url" && v.default_value) {
-    return true;
-  }
-  return false;
+  return v.category === "api" && v.var_type === "url" && !!v.default_value;
 }
 
 function filterVariables(
   variables: VariableDefinition[],
   tab: "manual" | "api"
 ): VariableDefinition[] {
-  return variables.filter((v) => classifyVariable(v) === tab);
+  return variables.filter((v) => v.category === tab || v.category === "both");
 }
 
 function hasVariablesForTab(
@@ -283,6 +260,9 @@ export default function AppDetailPage() {
           <button type="submit" className="fr-btn" disabled={saving}>
             {saving ? "Sauvegarde..." : "Sauvegarder"}
           </button>
+          {tab === "api" && !isNew && (
+            <ConnectionChecker appSlug={appSlug!} />
+          )}
           <Link to={`/bridge/${appSlug}`} className="fr-btn fr-btn--secondary">
             Import / Export
           </Link>
@@ -293,8 +273,6 @@ export default function AppDetailPage() {
           )}
         </div>
       </form>
-
-      <ConnectionChecker appSlug={appSlug!} disabled={!app.check_connection_endpoint} />
     </>
   );
 }

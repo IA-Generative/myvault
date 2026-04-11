@@ -1,5 +1,6 @@
 /**
- * Button that tests the connection and displays the result (spinner, success, error).
+ * Inline button that tests the API connection via the backend.
+ * The backend performs the test (it's on the Docker/K8s network and can reach internal services).
  */
 
 import { useState, useCallback } from "react";
@@ -7,10 +8,9 @@ import { userApi } from "../services/api";
 
 interface ConnectionCheckerProps {
   appSlug: string;
-  disabled?: boolean;
 }
 
-export default function ConnectionChecker({ appSlug, disabled }: ConnectionCheckerProps) {
+export default function ConnectionChecker({ appSlug }: ConnectionCheckerProps) {
   const [state, setState] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [detail, setDetail] = useState("");
 
@@ -27,33 +27,34 @@ export default function ConnectionChecker({ appSlug, disabled }: ConnectionCheck
   }, [appSlug]);
 
   return (
-    <div className="fr-mt-2w">
+    <>
       <button
         type="button"
         className="fr-btn fr-btn--secondary fr-btn--sm"
         onClick={handleCheck}
-        disabled={disabled || state === "loading"}
+        disabled={state === "loading"}
       >
-        {state === "loading" ? (
-          <>
-            <span className="fr-icon-refresh-line fr-icon--spin" aria-hidden="true" /> Test en cours...
-          </>
-        ) : (
-          "Tester la connexion"
-        )}
+        {state === "loading"
+          ? "Test en cours..."
+          : state === "ok"
+            ? "API OK"
+            : state === "error"
+              ? "Retester l'API"
+              : "Tester l'API"
+        }
       </button>
 
       {state === "ok" && (
-        <div className="fr-alert fr-alert--success fr-alert--sm fr-mt-1w" role="status">
-          <p>Connexion réussie{detail ? ` — ${detail}` : ""}</p>
-        </div>
+        <span className="fr-valid-text" role="status" style={{ marginLeft: "0.5rem" }}>
+          {detail || "Connexion réussie"}
+        </span>
       )}
 
       {state === "error" && (
-        <div className="fr-alert fr-alert--error fr-alert--sm fr-mt-1w" role="alert">
-          <p>Connexion échouée{detail ? ` — ${detail}` : ""}</p>
-        </div>
+        <span className="fr-error-text" role="alert" style={{ marginLeft: "0.5rem" }}>
+          {detail || "Connexion échouée"}
+        </span>
       )}
-    </div>
+    </>
   );
 }

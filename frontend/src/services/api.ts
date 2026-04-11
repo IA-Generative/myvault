@@ -34,6 +34,7 @@ export interface VariableDefinition {
   description: string;
   default_value: string;
   choices?: string[];
+  category: "manual" | "api" | "both";
 }
 
 export interface AppListItem {

@@ -53,6 +53,7 @@ async def get_user_apps(
                     "description": v.description,
                     "default_value": v.default_value,
                     "choices": v.choices,
+                    "category": v.category,
                 }
                 for v in app.required_variables
             ],

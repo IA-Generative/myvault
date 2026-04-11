@@ -66,6 +66,7 @@ class RequiredVariable(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     default_value: Mapped[str] = mapped_column(Text, default="")
     choices: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    category: Mapped[str] = mapped_column(String(10), default="both")
     sort_order: Mapped[int] = mapped_column(default=0)
 
     application: Mapped["Application"] = relationship(back_populates="required_variables")

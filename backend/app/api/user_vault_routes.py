@@ -82,34 +82,81 @@ async def check_my_connection(
     user: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Test the connection using my stored credentials."""
+    """Test the API connection using stored credentials.
+
+    The backend performs the test (not the browser) because it can reach
+    internal services on the Docker/K8s network.
+    """
     import httpx
 
     entry = await vault_service.get_user_entry(db, user.user_id, app_slug)
     if entry is None:
-        raise HTTPException(status_code=404, detail="No credentials configured")
+        raise HTTPException(status_code=404, detail="Aucun identifiant configuré")
 
     from app.services.app_service import get_app_by_slug
 
     app = await get_app_by_slug(db, app_slug)
-    if app is None or not app.check_connection_endpoint:
-        raise HTTPException(status_code=400, detail="No check endpoint configured")
+    if app is None:
+        raise HTTPException(status_code=404, detail="Application non trouvée")
 
-    # Call the check endpoint
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                f"{app.check_connection_endpoint}",
-                json=entry["values"],
-            )
-            result = resp.json()
-    except Exception as e:
-        result = {"status": "error", "detail": str(e)}
+    values = entry["values"]
 
-    status = result.get("status", "error")
-    await vault_service.update_check_status(db, user.user_id, app.id, status)
+    # If app has a custom check endpoint, use it
+    if app.check_connection_endpoint:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(app.check_connection_endpoint, json=values)
+                result = resp.json()
+        except Exception as e:
+            result = {"status": "error", "detail": str(e)}
+    else:
+        # Generic check: try to reach the API URL
+        result = await _generic_api_check(app, values)
 
+    check_status = result.get("status", "error")
+    await vault_service.update_check_status(db, user.user_id, app.id, check_status)
     return result
+
+
+async def _generic_api_check(app, values: dict) -> dict:
+    """Try to reach the API endpoint with available credentials."""
+    import httpx
+    from app.models.database_models import RequiredVariable
+
+    # Find the API URL variable
+    api_url = None
+    token = None
+    for v in app.required_variables:
+        if v.category == "api" and v.var_type == "url" and values.get(v.key):
+            api_url = values[v.key]
+        if v.category == "api" and v.var_type in ("api_key", "oauth_token") and values.get(v.key):
+            token = values[v.key]
+
+    if not api_url:
+        return {"status": "error", "detail": "Aucune URL API configurée"}
+
+    try:
+        headers = {}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(api_url, headers=headers, follow_redirects=True)
+
+        if resp.status_code < 400:
+            return {"status": "ok", "detail": f"API joignable ({resp.status_code})"}
+        elif resp.status_code == 401:
+            return {"status": "error", "detail": "Authentification refusée (401) — vérifiez votre token"}
+        elif resp.status_code == 403:
+            return {"status": "error", "detail": "Accès interdit (403) — vérifiez les permissions du token"}
+        else:
+            return {"status": "error", "detail": f"Réponse API : {resp.status_code}"}
+    except httpx.ConnectError:
+        return {"status": "error", "detail": f"Impossible de joindre {api_url}"}
+    except httpx.TimeoutException:
+        return {"status": "error", "detail": f"Timeout en contactant {api_url}"}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
 
 
 @router.get("/entries")
