@@ -1,0 +1,59 @@
+{
+  "clients": [
+    {
+      "clientId": "myvault-grist-tool",
+      "name": "Grist Connector",
+      "secret": "",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "myvault.variables": "[{\"key\":\"api_token\",\"label\":\"Clé API Grist\",\"type\":\"api_key\",\"required\":true,\"description\":\"Token d'accès personnel Grist\"},{\"key\":\"server_url\",\"label\":\"URL du serveur Grist\",\"type\":\"url\",\"required\":true,\"default\":\"https://grist.numerique.gouv.fr\"},{\"key\":\"doc_id\",\"label\":\"ID du document par défaut\",\"type\":\"text\",\"required\":false}]",
+        "myvault.check_endpoint": ""
+      }
+    },
+    {
+      "clientId": "myvault-tchap-bot",
+      "name": "Tchap Bot (Matrix)",
+      "secret": "",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "myvault.variables": "[{\"key\":\"homeserver_url\",\"label\":\"URL du homeserver Matrix\",\"type\":\"url\",\"required\":true,\"default\":\"https://matrix.agent.tchap.gouv.fr\"},{\"key\":\"access_token\",\"label\":\"Token d'accès Matrix\",\"type\":\"oauth_token\",\"required\":true,\"description\":\"Token obtenu via /login sur le homeserver\"},{\"key\":\"room_id\",\"label\":\"ID du salon par défaut\",\"type\":\"text\",\"required\":false,\"description\":\"Format : !xxxxx:agent.tchap.gouv.fr\"}]",
+        "myvault.check_endpoint": ""
+      }
+    },
+    {
+      "clientId": "myvault-github-tool",
+      "name": "GitHub",
+      "secret": "",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "myvault.variables": "[{\"key\":\"github_token\",\"label\":\"Personal Access Token (PAT)\",\"type\":\"api_key\",\"required\":true,\"description\":\"Token GitHub avec les scopes nécessaires\"},{\"key\":\"github_org\",\"label\":\"Organisation GitHub\",\"type\":\"text\",\"required\":false},{\"key\":\"github_api_url\",\"label\":\"URL API GitHub\",\"type\":\"url\",\"required\":false,\"default\":\"https://api.github.com\",\"description\":\"Modifier pour GitHub Enterprise\"}]",
+        "myvault.check_endpoint": ""
+      }
+    },
+    {
+      "clientId": "myvault-mattermost-tool",
+      "name": "Mattermost",
+      "secret": "",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "myvault.variables": "[{\"key\":\"mattermost_url\",\"label\":\"URL du serveur Mattermost\",\"type\":\"url\",\"required\":true},{\"key\":\"mattermost_bot_token\",\"label\":\"Token du bot Mattermost\",\"type\":\"api_key\",\"required\":true},{\"key\":\"mattermost_channel_id\",\"label\":\"ID du canal par défaut\",\"type\":\"text\",\"required\":false}]",
+        "myvault.check_endpoint": ""
+      }
+    },
+    {
+      "clientId": "myvault-linkedin-tool",
+      "name": "LinkedIn",
+      "secret": "",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "myvault.variables": "[{\"key\":\"linkedin_access_token\",\"label\":\"Token d'accès LinkedIn\",\"type\":\"oauth_token\",\"required\":true,\"description\":\"Token OAuth 2.0 obtenu via le flux d'autorisation LinkedIn\"}]",
+        "myvault.check_endpoint": ""
+      }
+    }
+  ]
+}

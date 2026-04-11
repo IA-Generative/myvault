@@ -1,0 +1,37 @@
+{
+  "clientId": "myvault",
+  "name": "MyVault — Coffre-fort de credentials",
+  "description": "Application MyVault pour l'authentification SSO des utilisateurs",
+  "enabled": true,
+  "protocol": "openid-connect",
+  "clientAuthenticatorType": "client-secret",
+  "publicClient": false,
+  "directAccessGrantsEnabled": false,
+  "standardFlowEnabled": true,
+  "implicitFlowEnabled": false,
+  "serviceAccountsEnabled": false,
+  "redirectUris": [
+    "https://myvault.example.com/*",
+    "http://localhost:3000/*",
+    "http://localhost:8080/*"
+  ],
+  "webOrigins": [
+    "https://myvault.example.com",
+    "http://localhost:3000",
+    "http://localhost:8080"
+  ],
+  "defaultClientScopes": [
+    "openid",
+    "profile",
+    "email"
+  ],
+  "attributes": {
+    "post.logout.redirect.uris": "https://myvault.example.com/*##http://localhost:3000/*"
+  },
+  "roles": [
+    {
+      "name": "myvault-admin",
+      "description": "Administrateur MyVault — gestion des applications, import/export, vue des utilisateurs provisionnés"
+    }
+  ]
+}

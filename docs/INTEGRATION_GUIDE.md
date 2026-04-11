@@ -2,6 +2,33 @@
 
 Ce guide explique comment intégrer MyVault dans un tool OpenWebUI ou toute application Python.
 
+## Prérequis : configurer Keycloak
+
+Avant d'utiliser MyVault, un client OIDC doit être créé dans votre realm Keycloak. Un fichier d'import prêt à l'emploi est fourni :
+
+1. Dans Keycloak Admin Console, aller dans **Clients > Import client**
+2. Importer le fichier [`docs/keycloak-client-myvault.json`](keycloak-client-myvault.json)
+3. Adapter les `redirectUris` et `webOrigins` à votre domaine
+4. Noter le **Client Secret** généré par Keycloak
+5. Créer le rôle `myvault-admin` et l'attribuer aux administrateurs
+6. Reporter les valeurs dans le `.env` :
+   ```bash
+   OIDC_ISSUER_URL=https://keycloak.example.com/realms/mirai
+   OIDC_CLIENT_ID=myvault
+   OIDC_CLIENT_SECRET=<secret généré par Keycloak>
+   ```
+
+## Prérequis : importer des applications dans MyVault
+
+Un fichier d'exemple avec 5 applications (Grist, Tchap, GitHub, Mattermost, LinkedIn) est fourni :
+
+1. Se connecter à MyVault en tant qu'administrateur
+2. Aller dans **Administration > Importer (JSON)**
+3. Charger le fichier [`docs/sample-apps-import.json`](sample-apps-import.json)
+4. Les applications apparaissent dans le coffre-fort de tous les utilisateurs
+
+Ce fichier utilise le format Keycloak `clients` pour l'interopérabilité. Les champs `secret` vides sont auto-générés à l'import.
+
 ## Installation du SDK
 
 ```bash
