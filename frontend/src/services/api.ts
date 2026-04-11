@@ -38,6 +38,7 @@ export interface AppListItem {
   icon_url: string;
   friendly_slug: string;
   status: string;
+  check_connection_endpoint: string;
   required_variables: VariableDefinition[];
   user_configured: boolean;
   user_enabled: boolean;
