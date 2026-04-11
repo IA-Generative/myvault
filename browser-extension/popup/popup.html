@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>MyVault Assistant</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <span class="popup-logo">&#128274;</span>
+      <h1>MyVault Assistant</h1>
+    </header>
+
+    <div id="detected-app" class="detected-section" style="display: none;">
+      <p class="detected-label">Application détectée :</p>
+      <p id="detected-name" class="detected-name"></p>
+      <span id="detected-status" class="status-badge"></span>
+    </div>
+
+    <div id="credentials-section" class="credentials-section" style="display: none;">
+    </div>
+
+    <div id="app-list" class="app-list">
+      <h2>Mes applications</h2>
+      <ul id="apps-ul"></ul>
+    </div>
+
+    <footer class="popup-footer">
+      <a id="open-myvault" href="#" target="_blank" rel="noopener">Ouvrir MyVault</a>
+      <button id="settings-btn" class="settings-btn" title="Paramètres">&#9881;</button>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

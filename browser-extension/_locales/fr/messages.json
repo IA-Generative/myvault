@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "MyVault Assistant",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Gérez vos credentials MyVault depuis votre navigateur",
+    "description": "Extension description"
+  }
+}

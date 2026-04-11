@@ -1,0 +1,11 @@
+/* Content script styles are isolated via Shadow DOM in content.js.
+   This file is kept minimal — only for the host element positioning. */
+#myvault-extension-host {
+  position: fixed;
+  z-index: 2147483647;
+  pointer-events: none;
+}
+
+#myvault-extension-host * {
+  pointer-events: auto;
+}

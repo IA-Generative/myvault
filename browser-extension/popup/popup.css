@@ -1,0 +1,176 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  font-family: "Marianne", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #333;
+}
+
+.popup-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-header {
+  background: #000091;
+  color: white;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.popup-header h1 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.popup-logo {
+  font-size: 20px;
+}
+
+.detected-section {
+  padding: 12px 16px;
+  background: #f0f0ff;
+  border-bottom: 2px solid #000091;
+}
+
+.detected-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #666;
+  letter-spacing: 0.5px;
+}
+
+.detected-name {
+  font-weight: 700;
+  font-size: 15px;
+  margin: 4px 0;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-badge.ok {
+  background: #B8FEC9;
+  color: #18753C;
+}
+
+.status-badge.error {
+  background: #FFE9E9;
+  color: #CE0500;
+}
+
+.status-badge.unconfigured {
+  background: #FEF7DA;
+  color: #716043;
+}
+
+.credentials-section {
+  padding: 12px 16px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.cred-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.cred-row:last-child {
+  border-bottom: none;
+}
+
+.cred-key {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.cred-value {
+  font-family: monospace;
+  font-size: 11px;
+  color: #666;
+}
+
+.copy-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #000091;
+}
+
+.copy-btn:hover {
+  background: #f0f0ff;
+}
+
+.app-list {
+  padding: 12px 16px;
+}
+
+.app-list h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #666;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.app-list ul {
+  list-style: none;
+}
+
+.app-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.app-list li:last-child {
+  border-bottom: none;
+}
+
+.app-name {
+  font-weight: 500;
+}
+
+.popup-footer {
+  padding: 10px 16px;
+  border-top: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fafafa;
+}
+
+.popup-footer a {
+  color: #000091;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.settings-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #666;
+}

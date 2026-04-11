@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "MyVault Assistant",
+  "version": "1.0.0",
+  "description": "Gérez vos credentials MyVault depuis votre navigateur",
+  "permissions": ["activeTab", "storage", "notifications"],
+  "host_permissions": ["https://myvault.example.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/myvault-16.png",
+      "48": "icons/myvault-48.png",
+      "128": "icons/myvault-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/content.js"],
+      "css": ["content/content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/myvault-16.png",
+    "48": "icons/myvault-48.png",
+    "128": "icons/myvault-128.png"
+  },
+  "default_locale": "fr",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none';"
+  }
+}
