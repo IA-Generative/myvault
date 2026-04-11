@@ -100,6 +100,7 @@ Stored Value = base64(nonce + ciphertext)
 - Chaque chiffrement utilise un nonce aléatoire unique (12 octets)
 - AES-GCM fournit confidentialité ET intégrité (AEAD)
 - La clé maître est stockée dans un Secret Kubernetes, jamais dans le code
+- Le Secret Kubernetes peut lui-même être géré par un vault d'infrastructure (OpenBao, HashiCorp Vault, KMS souverain) via Agent Injector, CSI driver ou External Secrets Operator — voir [ADR-001](adr/ADR-001-choix-moteur-secrets.md#protection-de-la-clé-maître)
 
 ### Authentification
 

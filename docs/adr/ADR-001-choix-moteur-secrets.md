@@ -134,13 +134,46 @@ La différence principale : OpenBao ajoute des **leases** (durée de vie des sec
 - AES-GCM fournit confidentialité ET intégrité (détection de toute altération)
 - La clé maître ne quitte jamais le Secret Kubernetes
 
+### Protection de la clé maître
+
+Le Secret Kubernetes contenant la clé maître peut lui-même être protégé par un vault d'infrastructure (OpenBao, HashiCorp Vault, ou tout KMS souverain). Dans cette configuration :
+
+```
+┌──────────────────────────────────┐
+│  Vault d'infrastructure          │
+│  (OpenBao / Vault / KMS)         │
+│                                  │
+│  Stocke et injecte la clé       │
+│  maître dans le Secret K8s      │
+└──────────────┬───────────────────┘
+               │ Sealed Secret / CSI driver / Agent injector
+               ▼
+┌──────────────────────────────────┐
+│  Secret Kubernetes               │
+│  MYVAULT_MASTER_KEY             │
+└──────────────┬───────────────────┘
+               │ Variable d'environnement (pod)
+               ▼
+         MyVault Backend
+```
+
+Cela permet de bénéficier de la gestion centralisée des secrets d'infrastructure (rotation, audit, contrôle d'accès, unseal ceremony) **là où elle a du sens** — pour protéger la clé maître elle-même — tout en gardant le chiffrement applicatif simple côté MyVault pour les credentials utilisateur.
+
+Mécanismes d'injection possibles :
+- **Vault Agent Injector** : sidecar qui injecte le secret dans le pod au démarrage
+- **CSI Secret Store Driver** : monte le secret comme volume depuis le vault
+- **External Secrets Operator** : synchronise le vault vers un Secret Kubernetes natif
+- **Sealed Secrets** (Bitnami) : chiffre le Secret dans Git, déchiffré par le contrôleur en cluster
+
+Cette approche sépare clairement les responsabilités : le vault d'infrastructure protège les **secrets de déploiement** (clé maître, credentials DB, OIDC client secret), tandis que MyVault protège les **secrets utilisateur** (clés API, tokens personnels).
+
 ---
 
 ## Risques et mitigations
 
 | Risque | Probabilité | Impact | Mitigation |
 |--------|-------------|--------|------------|
-| Compromission de la clé maître | Faible | Critique | RBAC K8s strict, rotation possible (re-chiffrement en background) |
+| Compromission de la clé maître | Faible | Critique | RBAC K8s strict, rotation possible (re-chiffrement en background), stockage optionnel dans un vault d'infrastructure |
 | Bug dans le code de chiffrement | Faible | Élevé | Code court (~50 lignes), bibliothèque `cryptography` maintenue par PyCA, tests unitaires exhaustifs |
 | Perte de la clé maître | Faible | Critique | Backup du Secret K8s, procédure de disaster recovery documentée |
 | Besoin futur de rotation automatique | Moyenne | Faible | Migration vers OpenBao possible sans changement d'API (voir section Évolution) |
