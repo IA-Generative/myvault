@@ -99,6 +99,38 @@ class EntryResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# --- Personal Entries ---
+
+
+class PersonalEntryCreate(BaseModel):
+    name: str
+    website: str = ""
+    username: str = ""
+    password: str = ""
+    notes: str = ""
+
+
+class PersonalEntryUpdate(BaseModel):
+    name: str | None = None
+    website: str | None = None
+    username: str | None = None
+    password: str | None = None
+    notes: str | None = None
+
+
+class PersonalEntryResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    website: str
+    username: str
+    password: str
+    notes: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # --- Check Connection ---
 
 

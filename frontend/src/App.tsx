@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Header } from "@codegouvfr/react-dsfr/Header";
 import { Footer } from "@codegouvfr/react-dsfr/Footer";
 import VaultPage from "./pages/VaultPage";
+import PersonalVaultPage from "./pages/PersonalVaultPage";
 import AppDetailPage from "./pages/AppDetailPage";
 import AdminPage from "./pages/AdminPage";
 import AdminAppFormPage from "./pages/AdminAppFormPage";
@@ -102,7 +103,8 @@ function App() {
     );
   }
 
-  const isUserSection = location.pathname === "/" || location.pathname.startsWith("/app/") || location.pathname.startsWith("/bridge/");
+  const isAppsSection = location.pathname === "/" || location.pathname.startsWith("/app/") || location.pathname.startsWith("/bridge/");
+  const isPersonalSection = location.pathname === "/personal";
   const isAdminSection = location.pathname.startsWith("/admin");
 
   return (
@@ -128,7 +130,8 @@ function App() {
           },
         ]}
         navigation={[
-          { text: "Mes identifiants", linkProps: { href: "/" }, isActive: isUserSection },
+          { text: "Applications", linkProps: { href: "/" }, isActive: isAppsSection },
+          { text: "Mes identifiants", linkProps: { href: "/personal" }, isActive: isPersonalSection },
           { text: "Administration", linkProps: { href: "/admin" }, isActive: isAdminSection },
           { text: "Aide", linkProps: { href: "/guide" }, isActive: location.pathname === "/guide" },
         ]}
@@ -137,6 +140,7 @@ function App() {
       <div className="fr-container fr-my-4w">
         <Routes>
           <Route path="/" element={<VaultPage />} />
+          <Route path="/personal" element={<PersonalVaultPage />} />
           <Route path="/app/:appSlug" element={<AppDetailPage />} />
           <Route path="/bridge/:appSlug" element={<BridgePage />} />
           <Route path="/admin" element={<AdminPage />} />

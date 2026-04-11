@@ -98,3 +98,23 @@ class UserVaultEntry(Base):
     )
 
     application: Mapped["Application"] = relationship(back_populates="vault_entries")
+
+
+class PersonalEntry(Base):
+    """A free-form credential entry created by the user (not tied to an admin app)."""
+
+    __tablename__ = "personal_entries"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=new_uuid
+    )
+    user_id: Mapped[str] = mapped_column(String(255), index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    website: Mapped[str] = mapped_column(String(512), default="")
+    username: Mapped[str] = mapped_column(Text, default="")
+    encrypted_password: Mapped[str] = mapped_column(Text, default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )

@@ -117,6 +117,38 @@ export const userApi = {
   getAllEntries: () => request<VaultEntry[]>("/me/entries"),
 };
 
+// --- Personal Vault API ---
+
+export interface PersonalEntry {
+  id: string;
+  name: string;
+  website: string;
+  username: string;
+  password: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const personalApi = {
+  list: () => request<PersonalEntry[]>("/me/personal"),
+
+  create: (data: { name: string; website?: string; username?: string; password?: string; notes?: string }) =>
+    request<PersonalEntry>("/me/personal", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: { name?: string; website?: string; username?: string; password?: string; notes?: string }) =>
+    request<PersonalEntry>(`/me/personal/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    request<{ status: string }>(`/me/personal/${id}`, { method: "DELETE" }),
+};
+
 // --- Bridge API ---
 
 export const bridgeApi = {

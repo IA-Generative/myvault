@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.admin_routes import router as admin_router
 from app.api.bridge_routes import router as bridge_router
 from app.api.health_routes import router as health_router
+from app.api.personal_routes import router as personal_router
 from app.api.tool_access_routes import router as tool_router
 from app.api.user_vault_routes import router as user_router
 from app.core.config import settings
@@ -37,6 +38,7 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(user_router)
+app.include_router(personal_router)
 app.include_router(tool_router)
 app.include_router(admin_router)
 app.include_router(bridge_router)
