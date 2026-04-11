@@ -44,9 +44,19 @@ app.include_router(bridge_router)
 
 @app.on_event("startup")
 async def on_startup():
-    if settings.myvault_dev_mode:
+    # Import models so Base.metadata knows about all tables
+    from app.models import database_models  # noqa: F401
+
+    logger = logging.getLogger("myvault")
+
+    # Always ensure tables exist (safe: CREATE TABLE IF NOT EXISTS)
+    try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        logging.getLogger("myvault").warning(
-            "DEV MODE: auto-creating tables, auth bypassed"
-        )
+        logger.info("Database tables verified/created")
+    except Exception as e:
+        logger.error("Failed to create tables: %s", e)
+        raise
+
+    if settings.myvault_dev_mode:
+        logger.warning("DEV MODE: auth bypassed, dev user active")
