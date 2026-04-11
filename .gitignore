@@ -55,7 +55,7 @@ frontend/build/
 ._*
 .Spotlight-V100
 .Trashes
-Icon?
+Icon[^s]
 
 # === IDE ===
 .idea/
