@@ -1,22 +1,10 @@
 version: "3.8"
 
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-myvault}
-      POSTGRES_USER: ${POSTGRES_USER:-myvault}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_db_password}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "${POSTGRES_PORT:-5433}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myvault}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+# MyVault utilise le PostgreSQL et le Keycloak d'owuicore-main.
+# Prérequis : owuicore-main doit être démarré (docker compose up).
+# La base "myvault" est créée par le script postgres/init/01-create-databases.sql.
 
+services:
   backend:
     build:
       context: ../../backend
@@ -24,9 +12,9 @@ services:
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB:-myvault}
-      POSTGRES_USER: ${POSTGRES_USER:-myvault}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_db_password}
+      POSTGRES_DB: myvault
+      POSTGRES_USER: ${POSTGRES_USER:-owui}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-owui}
       MYVAULT_MASTER_KEY: ${MYVAULT_MASTER_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
       MYVAULT_JWT_SECRET: ${MYVAULT_JWT_SECRET:-dev-jwt-secret}
       MYVAULT_DEV_MODE: ${MYVAULT_DEV_MODE:-true}
@@ -37,9 +25,8 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     ports:
       - "${MYVAULT_BACKEND_PORT:-8000}:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
+    networks:
+      - owui-net
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health/live').raise_for_status()"]
       interval: 10s
@@ -52,8 +39,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8085:3000"
+    networks:
+      - owui-net
     depends_on:
       - backend
 
-volumes:
-  postgres_data:
+networks:
+  owui-net:
+    external: true

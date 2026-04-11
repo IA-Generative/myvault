@@ -2,9 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: myvault-config
-  namespace: myvault
 data:
-  POSTGRES_HOST: myvault-postgres
+  # PostgreSQL partagé d'owuicore-main (même namespace ou cross-namespace)
+  POSTGRES_HOST: postgres
   POSTGRES_PORT: "5432"
   POSTGRES_DB: myvault
   MYVAULT_LOG_LEVEL: info

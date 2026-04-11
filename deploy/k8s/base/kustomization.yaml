@@ -1,12 +1,11 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: myvault
+# Déployé dans le même namespace qu'owuicore-main pour accéder au PostgreSQL partagé
+# Le namespace est défini dans l'overlay (dev ou prod)
 
 resources:
-  - namespace.yaml
   - configmap.yaml
   - secrets.yaml
-  - postgres-deployment.yaml
   - backend-deployment.yaml
   - frontend-deployment.yaml
