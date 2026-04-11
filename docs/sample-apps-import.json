@@ -29,7 +29,18 @@
       "enabled": true,
       "protocol": "openid-connect",
       "attributes": {
-        "myvault.variables": "[{\"key\":\"github_token\",\"label\":\"Personal Access Token (PAT)\",\"type\":\"api_key\",\"required\":true,\"description\":\"Token GitHub avec les scopes nécessaires\"},{\"key\":\"github_org\",\"label\":\"Organisation GitHub\",\"type\":\"text\",\"required\":false},{\"key\":\"github_api_url\",\"label\":\"URL API GitHub\",\"type\":\"url\",\"required\":false,\"default\":\"https://api.github.com\",\"description\":\"Modifier pour GitHub Enterprise\"}]",
+        "myvault.variables": "[{\"key\":\"github_token\",\"label\":\"Personal Access Token (PAT)\",\"type\":\"api_key\",\"required\":true,\"description\":\"Token GitHub (format github_pat_... ou ghp_...) avec les scopes repo, project, read:org\"},{\"key\":\"github_org\",\"label\":\"Organisation GitHub\",\"type\":\"text\",\"required\":false,\"description\":\"Nom de l'organisation (ex : IA-Generative)\"},{\"key\":\"github_api_url\",\"label\":\"URL API GitHub\",\"type\":\"url\",\"required\":false,\"default\":\"https://api.github.com\",\"description\":\"Modifier pour GitHub Enterprise\"}]",
+        "myvault.check_endpoint": ""
+      }
+    },
+    {
+      "clientId": "myvault-iobeya-tool",
+      "name": "iObeya",
+      "secret": "",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "myvault.variables": "[{\"key\":\"iobeya_token\",\"label\":\"Token JWT iObeya\",\"type\":\"api_key\",\"required\":true,\"description\":\"Token d'authentification JWT pour l'API iObeya\"},{\"key\":\"iobeya_base_url\",\"label\":\"URL de l'instance iObeya\",\"type\":\"url\",\"required\":true,\"default\":\"https://iobeya.numerique-interieur.com\",\"description\":\"URL de base de votre instance iObeya\"},{\"key\":\"iobeya_room_id\",\"label\":\"ID de la room\",\"type\":\"text\",\"required\":true,\"description\":\"UUID de la room iObeya (visible dans l'URL)\"},{\"key\":\"iobeya_type_feature_card\",\"label\":\"Type de carte Feature\",\"type\":\"text\",\"required\":false,\"default\":\"Feature\",\"description\":\"Nom du type de carte pour les features\"},{\"key\":\"iobeya_type_epic_card\",\"label\":\"Type de carte Epic\",\"type\":\"text\",\"required\":false,\"default\":\"Epic\",\"description\":\"Nom du type de carte pour les epics\"}]",
         "myvault.check_endpoint": ""
       }
     },
