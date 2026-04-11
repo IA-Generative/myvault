@@ -51,9 +51,6 @@ function App() {
   }, []);
 
   const userName = user?.profile?.name || user?.profile?.preferred_username || user?.profile?.email || "";
-  const isAdmin = (
-    (user?.profile as Record<string, unknown>)?.resource_access as Record<string, { roles?: string[] }> | undefined
-  )?.myvault?.roles?.includes("myvault-admin") ?? false;
 
   if (loading) {
     return (
@@ -131,7 +128,7 @@ function App() {
         ]}
         navigation={[
           { text: "Mon coffre-fort", linkProps: { href: "/" } },
-          ...(isAdmin ? [{ text: "Administration", linkProps: { href: "/admin" } }] : []),
+          { text: "Administration", linkProps: { href: "/admin" } },
           { text: "Aide", linkProps: { href: "/guide" } },
         ]}
       />
