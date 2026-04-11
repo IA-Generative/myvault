@@ -130,7 +130,19 @@ export default function PopupCredentialsPage() {
 
       {/* Footer */}
       <div style={styles.footer}>
-        Copiez vos identifiants dans l'application
+        <div style={{ marginBottom: 6, color: "#666" }}>
+          Copiez vos identifiants dans l'application
+        </div>
+        <button
+          onClick={() => {
+            // Tell opener to restore its size
+            window.opener?.postMessage({ type: "MYVAULT_POPUP_CLOSED" }, "*");
+            window.close();
+          }}
+          style={styles.closeBtn}
+        >
+          Fermer
+        </button>
       </div>
     </div>
   );
@@ -245,10 +257,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#000091",
   },
   footer: {
-    padding: "6px 14px",
+    padding: "10px 14px",
     borderTop: "1px solid #eee",
     textAlign: "center" as const,
     fontSize: 11,
-    color: "#999",
+  },
+  closeBtn: {
+    background: "none",
+    border: "1px solid #ddd",
+    borderRadius: 4,
+    padding: "4px 16px",
+    fontSize: 12,
+    cursor: "pointer",
+    color: "#333",
   },
 };
