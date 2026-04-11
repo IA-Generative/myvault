@@ -23,10 +23,18 @@ class Settings(BaseSettings):
     myvault_jwt_secret: str = "changeme_jwt_secret"
 
     # OIDC / Keycloak — realm "openwebui" (owuicore-main)
+    # OIDC_ISSUER_URL: public URL (what the browser sees, used as JWT issuer claim)
     oidc_issuer_url: str = "http://localhost:8082/realms/openwebui"
+    # OIDC_INTERNAL_URL: internal Docker URL for fetching JWKS (optional, falls back to issuer)
+    oidc_internal_url: str = ""
     oidc_client_id: str = "myvault"
     oidc_client_secret: str = ""
     oidc_admin_role: str = "myvault-admin"
+
+    @property
+    def oidc_jwks_base_url(self) -> str:
+        """URL used to fetch OIDC config/JWKS (internal Docker network)."""
+        return self.oidc_internal_url or self.oidc_issuer_url
 
     # Application
     myvault_url: str = "http://localhost:8085"

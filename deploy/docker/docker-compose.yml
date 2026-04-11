@@ -17,10 +17,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-owui}
       MYVAULT_MASTER_KEY: ${MYVAULT_MASTER_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
       MYVAULT_JWT_SECRET: ${MYVAULT_JWT_SECRET:-dev-jwt-secret}
-      MYVAULT_DEV_MODE: ${MYVAULT_DEV_MODE:-true}
-      MYVAULT_DEV_ADMIN: ${MYVAULT_DEV_ADMIN:-true}
+      MYVAULT_DEV_MODE: ${MYVAULT_DEV_MODE:-false}
       MYVAULT_CORS_ORIGINS: http://localhost:8085
-      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-http://keycloak:8080/realms/openwebui}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-http://localhost:8082/realms/openwebui}
+      OIDC_INTERNAL_URL: http://keycloak:8080/realms/openwebui
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-myvault}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     ports:

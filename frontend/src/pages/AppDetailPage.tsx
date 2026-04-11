@@ -14,6 +14,7 @@ export default function AppDetailPage() {
   const [app, setApp] = useState<AppListItem | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [enabled, setEnabled] = useState(true);
+  const [isNew, setIsNew] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -31,6 +32,7 @@ export default function AppDetailPage() {
       if ("entry_id" in entry) {
         setValues(entry.values);
         setEnabled(entry.enabled);
+        setIsNew(false);
       } else {
         // Pre-fill defaults
         const defaults: Record<string, string> = {};
@@ -54,6 +56,7 @@ export default function AppDetailPage() {
     try {
       await userApi.saveMyEntry(appSlug, values, enabled);
       setSaved(true);
+      setIsNew(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de sauvegarde");
     } finally {
@@ -97,21 +100,34 @@ export default function AppDetailPage() {
           <h1>{app.name}</h1>
           <p>{app.description}</p>
         </div>
-        <div className="fr-col-auto">
-          <div className="fr-toggle">
-            <input
-              type="checkbox"
-              className="fr-toggle__input"
-              id="toggle-enabled"
-              checked={enabled}
-              onChange={handleToggle}
-            />
-            <label className="fr-toggle__label" htmlFor="toggle-enabled">
-              {enabled ? "Actif" : "Désactivé"}
-            </label>
+        {!isNew && (
+          <div className="fr-col-auto">
+            <div className="fr-toggle">
+              <input
+                type="checkbox"
+                className="fr-toggle__input"
+                id="toggle-enabled"
+                checked={enabled}
+                onChange={handleToggle}
+              />
+              <label className="fr-toggle__label" htmlFor="toggle-enabled">
+                {enabled ? "Actif" : "Désactivé"}
+              </label>
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {isNew && (
+        <div className="fr-alert fr-alert--info fr-mb-2w">
+          <h3 className="fr-alert__title">Première configuration</h3>
+          <p>
+            Remplissez les champs ci-dessous avec vos identifiants pour cette application,
+            puis cliquez sur <strong>Sauvegarder</strong>.
+            Vos données seront chiffrées et stockées en toute sécurité.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="fr-alert fr-alert--error fr-mb-2w">

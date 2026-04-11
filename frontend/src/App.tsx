@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Header } from "@codegouvfr/react-dsfr/Header";
 import { Footer } from "@codegouvfr/react-dsfr/Footer";
 import VaultPage from "./pages/VaultPage";
@@ -8,55 +8,119 @@ import AdminPage from "./pages/AdminPage";
 import AdminAppFormPage from "./pages/AdminAppFormPage";
 import BridgePage from "./pages/BridgePage";
 import GuidePage from "./pages/GuidePage";
-import { userApi, type UserProfile } from "./services/api";
+import { login, logout, getUser, handleCallback, type User } from "./services/auth";
 
 function App() {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    userApi.getProfile().then(setUser).catch(() => {});
+    // Handle OIDC callback (code in URL after Keycloak redirect)
+    if (location.search.includes("code=") || location.search.includes("state=")) {
+      handleCallback()
+        .then((u) => {
+          setUser(u);
+          // Clean URL
+          navigate(location.pathname, { replace: true });
+        })
+        .catch(() => {
+          navigate("/", { replace: true });
+        })
+        .finally(() => setLoading(false));
+    } else {
+      getUser()
+        .then(setUser)
+        .finally(() => setLoading(false));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleLogin = useCallback(async () => {
+    await login();
   }, []);
 
-  const quickAccessItems = user
-    ? [
-        {
-          iconId: "ri-account-circle-line" as const,
-          text: user.name || user.email || user.user_id,
-          linkProps: { href: "#" },
-        },
-        {
-          iconId: "ri-logout-box-r-line" as const,
-          text: "Se déconnecter",
-          linkProps: { href: "/" },
-        },
-      ]
-    : [
-        {
-          iconId: "ri-login-box-line" as const,
-          text: "Se connecter",
-          linkProps: { href: "/" },
-        },
-      ];
+  const handleLogout = useCallback(async () => {
+    await logout();
+  }, []);
+
+  const userName = user?.profile?.name || user?.profile?.preferred_username || user?.profile?.email || "";
+  const isAdmin = (
+    (user?.profile as Record<string, unknown>)?.resource_access as Record<string, { roles?: string[] }> | undefined
+  )?.myvault?.roles?.includes("myvault-admin") ?? false;
+
+  if (loading) {
+    return (
+      <div className="fr-container fr-my-4w">
+        <p>Chargement...</p>
+      </div>
+    );
+  }
+
+  // Not logged in — show login page
+  if (!user || user.expired) {
+    return (
+      <>
+        <Header
+          brandTop={<>RÉPUBLIQUE<br />FRANÇAISE</>}
+          homeLinkProps={{ href: "/", title: "MyVault" }}
+          serviceTitle="MyVault"
+          serviceTagline="Mon coffre-fort sécurisé"
+          quickAccessItems={[
+            {
+              iconId: "ri-login-box-line" as const,
+              text: "Se connecter",
+              linkProps: {
+                href: "#",
+                onClick: (e: React.MouseEvent) => { e.preventDefault(); handleLogin(); },
+              },
+            },
+          ]}
+        />
+        <div className="fr-container fr-my-4w" style={{ textAlign: "center", padding: "4rem 0" }}>
+          <h1>MyVault</h1>
+          <p className="fr-text--lg fr-mb-3w">
+            Votre coffre-fort sécurisé pour gérer vos identifiants
+            (clés API, tokens, mots de passe) sur toutes vos applications.
+          </p>
+          <button className="fr-btn fr-btn--lg" onClick={handleLogin}>
+            Se connecter avec Keycloak
+          </button>
+        </div>
+        <Footer
+          accessibility="partially compliant"
+          brandTop={<>RÉPUBLIQUE<br />FRANÇAISE</>}
+          homeLinkProps={{ href: "/", title: "MyVault" }}
+        />
+      </>
+    );
+  }
 
   return (
     <>
       <Header
-        brandTop={
-          <>
-            RÉPUBLIQUE
-            <br />
-            FRANÇAISE
-          </>
-        }
+        brandTop={<>RÉPUBLIQUE<br />FRANÇAISE</>}
         homeLinkProps={{ href: "/", title: "MyVault - Accueil" }}
         serviceTitle="MyVault"
         serviceTagline="Mon coffre-fort sécurisé"
-        quickAccessItems={quickAccessItems}
+        quickAccessItems={[
+          {
+            iconId: "ri-account-circle-line" as const,
+            text: userName,
+            linkProps: { href: "#" },
+          },
+          {
+            iconId: "ri-logout-box-r-line" as const,
+            text: "Se déconnecter",
+            linkProps: {
+              href: "#",
+              onClick: (e: React.MouseEvent) => { e.preventDefault(); handleLogout(); },
+            },
+          },
+        ]}
         navigation={[
           { text: "Mon coffre-fort", linkProps: { href: "/" } },
-          ...(user?.is_admin
-            ? [{ text: "Administration", linkProps: { href: "/admin" } }]
-            : []),
+          ...(isAdmin ? [{ text: "Administration", linkProps: { href: "/admin" } }] : []),
           { text: "Aide", linkProps: { href: "/guide" } },
         ]}
       />
@@ -75,13 +139,7 @@ function App() {
 
       <Footer
         accessibility="partially compliant"
-        brandTop={
-          <>
-            RÉPUBLIQUE
-            <br />
-            FRANÇAISE
-          </>
-        }
+        brandTop={<>RÉPUBLIQUE<br />FRANÇAISE</>}
         homeLinkProps={{ href: "/", title: "MyVault" }}
         bottomItems={[
           { text: "Accessibilité : partiellement conforme", linkProps: { href: "#" } },

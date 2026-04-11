@@ -35,7 +35,8 @@ class AuthenticatedClient:
 async def _fetch_oidc_config() -> dict:
     global _oidc_config
     if _oidc_config is None:
-        well_known = f"{settings.oidc_issuer_url}/.well-known/openid-configuration"
+        # Fetch via internal URL (Docker network) but tokens use public issuer
+        well_known = f"{settings.oidc_jwks_base_url}/.well-known/openid-configuration"
         async with httpx.AsyncClient() as client:
             resp = await client.get(well_known)
             resp.raise_for_status()
@@ -47,8 +48,15 @@ async def _fetch_jwks() -> dict:
     global _oidc_jwks
     if _oidc_jwks is None:
         config = await _fetch_oidc_config()
+        jwks_uri = config["jwks_uri"]
+        # Replace public host with internal host in JWKS URI
+        if settings.oidc_internal_url:
+            jwks_uri = jwks_uri.replace(
+                settings.oidc_issuer_url.rsplit("/realms/", 1)[0],
+                settings.oidc_internal_url.rsplit("/realms/", 1)[0],
+            )
         async with httpx.AsyncClient() as client:
-            resp = await client.get(config["jwks_uri"])
+            resp = await client.get(jwks_uri)
             resp.raise_for_status()
             _oidc_jwks = resp.json()
     return _oidc_jwks

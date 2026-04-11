@@ -1,5 +1,6 @@
 /**
- * Card displaying an application in the vault list with status badge.
+ * Card displaying an application in the vault list with status badge
+ * and a clear call-to-action.
  */
 
 import type { AppListItem } from "../services/api";
@@ -27,7 +28,7 @@ function statusBadge(app: AppListItem) {
 
 export default function AppCard({ app, onClick }: AppCardProps) {
   return (
-    <div className="fr-card fr-card--horizontal fr-enlarge-link" style={{ cursor: "pointer" }}>
+    <div className="fr-card fr-enlarge-link" style={{ cursor: "pointer" }}>
       <div className="fr-card__body">
         <div className="fr-card__content">
           <h3 className="fr-card__title">
@@ -38,19 +39,17 @@ export default function AppCard({ app, onClick }: AppCardProps) {
           <p className="fr-card__desc">{app.description}</p>
           <div className="fr-card__start">
             {statusBadge(app)}
-            <span className="fr-text--xs fr-ml-2w" style={{ color: "var(--text-mention-grey)" }}>
-              {app.required_variables.length} variable{app.required_variables.length > 1 ? "s" : ""}
-            </span>
+          </div>
+          <div className="fr-card__end">
+            <p className="fr-card__detail">
+              {app.user_configured
+                ? "Modifier mes identifiants"
+                : "Configurer mes identifiants"
+              }
+            </p>
           </div>
         </div>
       </div>
-      {app.icon_url && (
-        <div className="fr-card__header">
-          <div className="fr-card__img">
-            <img src={app.icon_url} alt="" className="fr-responsive-img" style={{ maxWidth: 48 }} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

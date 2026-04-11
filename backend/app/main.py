@@ -60,3 +60,11 @@ async def on_startup():
 
     if settings.myvault_dev_mode:
         logger.warning("DEV MODE: auth bypassed, dev user active")
+    else:
+        # Pre-load OIDC JWKS so first request doesn't have to wait
+        try:
+            from app.core.auth import _fetch_jwks
+            await _fetch_jwks()
+            logger.info("OIDC JWKS loaded from %s", settings.oidc_jwks_base_url)
+        except Exception as e:
+            logger.warning("Could not pre-load OIDC JWKS: %s", e)
