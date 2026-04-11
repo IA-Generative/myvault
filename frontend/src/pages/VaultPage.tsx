@@ -42,6 +42,7 @@ export default function VaultPage() {
   const [apps, setApps] = useState<AppListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [popupBlocked, setPopupBlocked] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -69,11 +70,18 @@ export default function VaultPage() {
       const popupHeight = 420;
       const left = window.screen.width - popupWidth - 20;
       const top = 60;
-      window.open(
+      const popup = window.open(
         `/popup/${app.friendly_slug}`,
         `myvault-${app.friendly_slug}`,
         `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes`
       );
+
+      // Detect if popup was blocked
+      if (!popup || popup.closed) {
+        setPopupBlocked(true);
+      } else {
+        setPopupBlocked(false);
+      }
     } catch {
       // silently fail
     }
@@ -90,6 +98,36 @@ export default function VaultPage() {
   return (
     <>
       <h1>Mes applications</h1>
+
+      {popupBlocked && (
+        <div className="fr-alert fr-alert--warning fr-mb-2w">
+          <h3 className="fr-alert__title">Fenêtre bloquée par le navigateur</h3>
+          <p>
+            La fenêtre d'identifiants a été bloquée. Pour que le bouton <strong>Ouvrir</strong> fonctionne,
+            autorisez les pop-ups pour ce site :
+          </p>
+          <ul style={{ margin: "0.5rem 0", paddingLeft: "1.5rem", fontSize: "0.875rem" }}>
+            <li>
+              <strong>Chrome</strong> : cliquez sur l'icône bloquée dans la barre d'adresse,
+              ou allez dans <em>Paramètres &gt; Confidentialité &gt; Paramètres des sites &gt; Pop-ups</em> et
+              ajoutez <code>{window.location.origin}</code>
+            </li>
+            <li>
+              <strong>Firefox</strong> : cliquez sur le bandeau de notification en haut de page,
+              ou allez dans <em>Paramètres &gt; Vie privée &gt; Permissions &gt; Pop-ups &gt; Exceptions</em> et
+              ajoutez <code>{window.location.origin}</code>
+            </li>
+            <li>
+              <strong>Edge</strong> : cliquez sur l'icône bloquée dans la barre d'adresse,
+              ou allez dans <em>Paramètres &gt; Cookies et autorisations &gt; Pop-ups</em> et
+              ajoutez <code>{window.location.origin}</code>
+            </li>
+          </ul>
+          <button className="fr-btn fr-btn--sm fr-btn--tertiary" onClick={() => setPopupBlocked(false)}>
+            Fermer
+          </button>
+        </div>
+      )}
       <p className="fr-text--lg fr-mb-3w">
         Configurez vos accès puis cliquez sur <strong>Ouvrir</strong> pour
         accéder à l'application avec vos identifiants à portée de main.

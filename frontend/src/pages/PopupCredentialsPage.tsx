@@ -77,7 +77,15 @@ export default function PopupCredentialsPage() {
     return <div style={styles.container}><p>Chargement...</p></div>;
   }
 
-  const entries = Object.entries(values).filter(([, v]) => v);
+  // Only show manual credentials (login, password, app_url) — not API tokens
+  const manualKeys = new Set(
+    app.required_variables
+      .filter((v) => v.category === "manual" || v.category === "both")
+      .map((v) => v.key)
+  );
+  const entries = Object.entries(values).filter(
+    ([key, v]) => v && manualKeys.has(key)
+  );
 
   return (
     <div style={styles.container}>
