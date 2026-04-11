@@ -1,0 +1,13 @@
+# Default owners for everything
+* @IA-Generative/myvault-maintainers
+
+# Backend
+/backend/ @IA-Generative/myvault-backend
+
+# Frontend
+/frontend/ @IA-Generative/myvault-frontend
+
+# Security-sensitive files
+/backend/app/core/encryption.py @IA-Generative/myvault-security
+/backend/app/core/auth.py @IA-Generative/myvault-security
+/deploy/k8s/base/secrets.yaml @IA-Generative/myvault-security
