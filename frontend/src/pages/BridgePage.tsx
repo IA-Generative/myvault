@@ -74,7 +74,7 @@ export default function BridgePage() {
     <>
       <nav className="fr-breadcrumb" aria-label="vous êtes ici :">
         <ol className="fr-breadcrumb__list">
-          <li><Link className="fr-breadcrumb__link" to="/">Mon coffre-fort</Link></li>
+          <li><Link className="fr-breadcrumb__link" to="/">Mes applications</Link></li>
           <li><Link className="fr-breadcrumb__link" to={`/app/${appSlug}`}>{app.name}</Link></li>
           <li><span className="fr-breadcrumb__link" aria-current="page">Pont de configuration</span></li>
         </ol>

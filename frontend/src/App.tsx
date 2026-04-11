@@ -127,9 +127,9 @@ function App() {
           },
         ]}
         navigation={[
-          { text: "Mon coffre-fort", linkProps: { href: "/" } },
-          { text: "Administration", linkProps: { href: "/admin" } },
-          { text: "Aide", linkProps: { href: "/guide" } },
+          { text: "Mes applications", linkProps: { href: "/" }, isActive: location.pathname === "/" || location.pathname.startsWith("/app/") || location.pathname.startsWith("/bridge/") },
+          { text: "Administration", linkProps: { href: "/admin" }, isActive: location.pathname.startsWith("/admin") },
+          { text: "Aide", linkProps: { href: "/guide" }, isActive: location.pathname === "/guide" },
         ]}
       />
 

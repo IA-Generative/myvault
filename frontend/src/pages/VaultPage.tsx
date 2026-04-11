@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import AppCard from "../components/AppCard";
 import { userApi, type AppListItem } from "../services/api";
 
@@ -39,18 +39,15 @@ export default function VaultPage() {
 
   return (
     <>
-      <h1>Mon coffre-fort</h1>
+      <h1>Mes applications</h1>
 
       {apps.length === 0 ? (
         <div className="fr-callout fr-callout--green-emeraude">
           <h3 className="fr-callout__title">Bienvenue dans MyVault</h3>
           <p className="fr-callout__text">
             Votre coffre-fort est prêt. Les applications apparaîtront ici
-            dès qu'un administrateur les aura ajoutées.
+            dès qu'un administrateur les aura ajoutées depuis l'onglet <strong>Administration</strong>.
           </p>
-          <Link to="/admin" className="fr-btn fr-mt-2w">
-            Administrer les applications
-          </Link>
         </div>
       ) : (
         <>
