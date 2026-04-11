@@ -60,16 +60,10 @@ export default function VaultPage() {
       if (!("entry_id" in entry)) return;
       const vaultEntry = entry as VaultEntry;
 
-      // Open the target app in a new tab
-      const targetUrl = getAppTargetUrl(app, vaultEntry);
-      if (targetUrl) {
-        window.open(targetUrl, "_blank", "noopener,noreferrer");
-      }
-
-      // Build credentials data for the popup
       const popupData = buildPopupData(app, vaultEntry.values);
+      const targetUrl = getAppTargetUrl(app, vaultEntry);
 
-      // Open a small credentials popup window
+      // 1. Open the credentials popup FIRST
       const popupWidth = 380;
       const popupHeight = 420;
       const left = window.screen.width - popupWidth - 20;
@@ -77,16 +71,17 @@ export default function VaultPage() {
       const popup = window.open(
         `/popup/${app.friendly_slug}`,
         `myvault-${app.friendly_slug}`,
-        `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes,alwaysRaised=yes`
       );
 
-      // Detect if popup was blocked
       if (!popup || popup.closed) {
         setPopupBlocked(true);
+        // Still open the app even if popup is blocked
+        if (targetUrl) window.open(targetUrl, "_blank", "noopener,noreferrer");
       } else {
         setPopupBlocked(false);
 
-        // Send credentials to popup once it's ready
+        // Send credentials to popup
         const sendData = () => {
           popup.postMessage(
             { type: "MYVAULT_CREDENTIALS", payload: popupData },
@@ -94,7 +89,6 @@ export default function VaultPage() {
           );
         };
 
-        // Listen for popup ready signal
         const onMessage = (event: MessageEvent) => {
           if (event.data?.type === "MYVAULT_POPUP_READY") {
             sendData();
@@ -102,10 +96,16 @@ export default function VaultPage() {
           }
         };
         window.addEventListener("message", onMessage);
-
-        // Also try sending after a short delay (fallback)
         setTimeout(sendData, 500);
         setTimeout(sendData, 1500);
+
+        // 2. Open the target app AFTER the popup (so popup is behind)
+        // 3. Then bring the popup back to the front
+        setTimeout(() => {
+          if (targetUrl) window.open(targetUrl, "_blank", "noopener,noreferrer");
+          // Bring popup to front after the app tab has opened
+          setTimeout(() => popup.focus(), 300);
+        }, 200);
       }
     } catch {
       // silently fail
