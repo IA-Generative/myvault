@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myvault}"]
       interval: 5s
@@ -32,11 +32,11 @@ services:
       MYVAULT_DEV_MODE: ${MYVAULT_DEV_MODE:-true}
       MYVAULT_DEV_ADMIN: ${MYVAULT_DEV_ADMIN:-true}
       MYVAULT_CORS_ORIGINS: http://localhost:8085
-      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-https://keycloak.example.com/realms/mirai}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-http://keycloak:8080/realms/openwebui}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-myvault}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     ports:
-      - "8000:8000"
+      - "${MYVAULT_BACKEND_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
