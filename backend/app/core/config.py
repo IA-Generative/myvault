@@ -22,16 +22,16 @@ class Settings(BaseSettings):
     myvault_master_key: str = "changeme_generate_with_openssl_rand_hex_32"
     myvault_jwt_secret: str = "changeme_jwt_secret"
 
-    # OIDC / Keycloak
-    oidc_issuer_url: str = "https://keycloak.example.com/realms/mirai"
+    # OIDC / Keycloak — realm "openwebui" (owuicore-main)
+    oidc_issuer_url: str = "http://localhost:8082/realms/openwebui"
     oidc_client_id: str = "myvault"
     oidc_client_secret: str = ""
     oidc_admin_role: str = "myvault-admin"
 
     # Application
-    myvault_url: str = "http://localhost:8080"
+    myvault_url: str = "http://localhost:8085"
     myvault_log_level: str = "info"
-    myvault_cors_origins: str = "http://localhost:3000"
+    myvault_cors_origins: str = "http://localhost:8085"
 
     @property
     def cors_origins(self) -> list[str]:

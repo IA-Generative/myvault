@@ -4,16 +4,20 @@ Ce guide explique comment intégrer MyVault dans un tool OpenWebUI ou toute appl
 
 ## Prérequis : configurer Keycloak
 
-Avant d'utiliser MyVault, un client OIDC doit être créé dans votre realm Keycloak. Un fichier d'import prêt à l'emploi est fourni :
+Le client `myvault` est **déjà défini** dans le realm `openwebui` d'owuicore-main (`keycloak/realm-openwebui.json`). Il inclut :
+- Client ID : `myvault` (confidentiel)
+- Redirect URIs : `https://myvault.example.com/*`, `http://localhost:8085/*`
+- Protocol mapper `myvault-client-roles` qui expose les rôles client dans `resource_access.myvault.roles`
 
-1. Dans Keycloak Admin Console, aller dans **Clients > Import client**
-2. Importer le fichier [`docs/keycloak-client-myvault.json`](keycloak-client-myvault.json)
-3. Adapter les `redirectUris` et `webOrigins` à votre domaine
-4. Noter le **Client Secret** généré par Keycloak
-5. Créer le rôle `myvault-admin` et l'attribuer aux administrateurs
-6. Reporter les valeurs dans le `.env` :
+Si vous démarrez avec le docker-compose d'owuicore-main, Keycloak est déjà configuré sur `http://localhost:8082` avec le realm `openwebui`.
+
+Si vous utilisez un Keycloak indépendant, importez [`docs/keycloak-client-myvault.json`](keycloak-client-myvault.json) via **Clients > Import client**, puis :
+1. Adapter les `redirectUris` et `webOrigins` à votre domaine
+2. Noter le **Client Secret** généré
+3. Créer le rôle client `myvault-admin` et l'attribuer aux administrateurs
+4. Reporter les valeurs dans le `.env` :
    ```bash
-   OIDC_ISSUER_URL=https://keycloak.example.com/realms/mirai
+   OIDC_ISSUER_URL=http://localhost:8082/realms/openwebui
    OIDC_CLIENT_ID=myvault
    OIDC_CLIENT_SECRET=<secret généré par Keycloak>
    ```
