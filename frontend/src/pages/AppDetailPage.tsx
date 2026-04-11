@@ -145,7 +145,7 @@ export default function AppDetailPage() {
       <nav className="fr-breadcrumb" aria-label="vous êtes ici :">
         <ol className="fr-breadcrumb__list">
           <li>
-            <Link className="fr-breadcrumb__link" to="/">Mes identifiants</Link>
+            <Link className="fr-breadcrumb__link" to="/">Mes applications</Link>
           </li>
           <li>
             <span className="fr-breadcrumb__link" aria-current="page">{app.name}</span>

@@ -144,9 +144,9 @@ export default function PersonalVaultPage() {
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <div>
-          <h1 style={{ marginBottom: "0.25rem" }}>Mes identifiants personnels</h1>
+          <h1 style={{ marginBottom: "0.25rem" }}>Coffre personnel</h1>
           <p className="fr-text--sm" style={{ color: "var(--text-mention-grey)", margin: 0 }}>
-            Vos logins et mots de passe, chiffrés et accessibles uniquement par vous.
+            Stockez librement vos logins et mots de passe. Chiffrés et accessibles uniquement par vous.
           </p>
         </div>
         {entries.length > 0 && !showForm && (

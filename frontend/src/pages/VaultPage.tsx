@@ -84,10 +84,10 @@ export default function VaultPage() {
 
   return (
     <>
-      <h1>Mes identifiants</h1>
+      <h1>Mes applications</h1>
       <p className="fr-text--lg fr-mb-3w">
-        Configurez vos identifiants puis cliquez sur <strong>Ouvrir</strong> pour
-        accéder à l'application avec vos credentials à portée de main.
+        Configurez vos accès puis cliquez sur <strong>Ouvrir</strong> pour
+        accéder à l'application avec vos identifiants à portée de main.
       </p>
 
       {apps.length === 0 ? (

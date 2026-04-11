@@ -130,8 +130,8 @@ function App() {
           },
         ]}
         navigation={[
-          { text: "Applications", linkProps: { href: "/" }, isActive: isAppsSection },
-          { text: "Mes identifiants", linkProps: { href: "/personal" }, isActive: isPersonalSection },
+          { text: "Mes applications", linkProps: { href: "/" }, isActive: isAppsSection },
+          { text: "Coffre personnel", linkProps: { href: "/personal" }, isActive: isPersonalSection },
           { text: "Administration", linkProps: { href: "/admin" }, isActive: isAdminSection },
           { text: "Aide", linkProps: { href: "/guide" }, isActive: location.pathname === "/guide" },
         ]}
