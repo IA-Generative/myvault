@@ -1,9 +1,10 @@
 /**
  * Main vault page: lists all applications with the user's configuration status.
+ * Shows clear guidance when no apps are available.
  */
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import AppCard from "../components/AppCard";
 import { userApi, type AppListItem } from "../services/api";
 
@@ -39,28 +40,30 @@ export default function VaultPage() {
   return (
     <>
       <h1>Mon coffre-fort</h1>
-      <p className="fr-text--lg">
-        Gérez vos identifiants pour chaque application connectée.
-        Cliquez sur une application pour configurer vos accès.
-      </p>
 
       {apps.length === 0 ? (
-        <div className="fr-callout">
-          <h3 className="fr-callout__title">Aucune application disponible</h3>
+        <div className="fr-callout fr-callout--green-emeraude">
+          <h3 className="fr-callout__title">Bienvenue dans MyVault</h3>
           <p className="fr-callout__text">
-            Les applications apparaîtront ici dès qu'un administrateur les aura ajoutées,
-            ou qu'un outil en aura besoin.
+            Votre coffre-fort est prêt. Les applications apparaîtront ici
+            dès qu'un administrateur les aura ajoutées.
           </p>
+          <Link to="/admin" className="fr-btn fr-mt-2w">
+            Administrer les applications
+          </Link>
         </div>
       ) : (
         <>
-          {configured.length > 0 && (
+          {unconfigured.length > 0 && (
             <>
-              <h2 className="fr-mt-3w">
-                Mes applications configurées ({configured.length})
-              </h2>
-              <div className="fr-grid-row fr-grid-row--gutters">
-                {configured.map((app) => (
+              <div className="fr-alert fr-alert--info fr-mb-3w">
+                <p>
+                  <strong>{unconfigured.length} application{unconfigured.length > 1 ? "s" : ""} à configurer</strong> —
+                  Cliquez sur une application puis remplissez vos identifiants pour l'activer.
+                </p>
+              </div>
+              <div className="fr-grid-row fr-grid-row--gutters fr-mb-3w">
+                {unconfigured.map((app) => (
                   <div className="fr-col-12 fr-col-md-6 fr-col-lg-4" key={app.id}>
                     <AppCard
                       app={app}
@@ -72,16 +75,13 @@ export default function VaultPage() {
             </>
           )}
 
-          {unconfigured.length > 0 && (
+          {configured.length > 0 && (
             <>
-              <h2 className="fr-mt-3w">
-                Applications à configurer ({unconfigured.length})
+              <h2>
+                Mes applications configurées ({configured.length})
               </h2>
-              <p className="fr-text--sm" style={{ color: "var(--text-mention-grey)" }}>
-                Cliquez sur une application pour saisir vos identifiants.
-              </p>
               <div className="fr-grid-row fr-grid-row--gutters">
-                {unconfigured.map((app) => (
+                {configured.map((app) => (
                   <div className="fr-col-12 fr-col-md-6 fr-col-lg-4" key={app.id}>
                     <AppCard
                       app={app}

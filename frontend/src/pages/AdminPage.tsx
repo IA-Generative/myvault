@@ -5,17 +5,21 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminApi, type AdminApp } from "../services/api";
+import { sampleApps } from "../services/sample-apps";
 
 export default function AdminPage() {
   const [apps, setApps] = useState<AdminApp[]>([]);
   const [users, setUsers] = useState<{ user_id: string; apps_configured: number; last_activity: string }[]>([]);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"apps" | "users">("apps");
+  const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
+  const refreshApps = () => adminApi.listApps().then(setApps).catch((e) => setError(e.message));
+
   useEffect(() => {
-    adminApi.listApps().then(setApps).catch((e) => setError(e.message));
+    refreshApps();
     adminApi.listUsers().then(setUsers).catch(() => {});
   }, []);
 
@@ -48,9 +52,23 @@ export default function AdminPage() {
       const data = JSON.parse(text);
       const result = await adminApi.importKeycloak(data);
       alert(`${result.imported} application(s) importée(s)`);
-      adminApi.listApps().then(setApps);
+      refreshApps();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fichier invalide");
+    }
+  };
+
+  const handleImportSamples = async () => {
+    setImporting(true);
+    setError("");
+    try {
+      const result = await adminApi.importKeycloak(sampleApps);
+      alert(`${result.imported} application(s) d'exemple importée(s)`);
+      refreshApps();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur d'import");
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -73,7 +91,7 @@ export default function AdminPage() {
               aria-selected={tab === "apps"}
               onClick={() => setTab("apps")}
             >
-              Applications
+              Applications ({apps.length})
             </button>
           </li>
           <li role="presentation">
@@ -91,7 +109,7 @@ export default function AdminPage() {
 
       {tab === "apps" && (
         <div className="fr-mt-2w">
-          <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
             <button className="fr-btn" onClick={() => navigate("/admin/apps/new")}>
               Créer une application
             </button>
@@ -99,7 +117,7 @@ export default function AdminPage() {
               Exporter (JSON)
             </button>
             <button className="fr-btn fr-btn--secondary" onClick={() => fileInputRef.current?.click()}>
-              Importer (JSON)
+              Importer un fichier JSON
             </button>
             <input
               ref={fileInputRef}
@@ -110,55 +128,68 @@ export default function AdminPage() {
             />
           </div>
 
-          <div className="fr-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Slug</th>
-                  <th>Client ID</th>
-                  <th>Statut</th>
-                  <th>Variables</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apps.map((app) => (
-                  <tr key={app.id}>
-                    <td>{app.name}</td>
-                    <td><code>{app.friendly_slug}</code></td>
-                    <td><code>{app.client_id}</code></td>
-                    <td>
-                      <span className={`fr-badge fr-badge--sm ${app.status === "active" ? "fr-badge--success" : "fr-badge--warning"}`}>
-                        {app.status}
-                      </span>
-                    </td>
-                    <td>{app.required_variables.length}</td>
-                    <td>
-                      <button
-                        className="fr-btn fr-btn--tertiary-no-outline fr-btn--sm"
-                        onClick={() => navigate(`/admin/apps/${app.id}/edit`)}
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        className="fr-btn fr-btn--tertiary-no-outline fr-btn--sm"
-                        style={{ color: "var(--text-default-error)" }}
-                        onClick={() => handleDelete(app.id, app.name)}
-                      >
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {apps.length === 0 && (
+          {apps.length === 0 ? (
+            <div className="fr-callout">
+              <h3 className="fr-callout__title">Aucune application</h3>
+              <p className="fr-callout__text">
+                Commencez par créer une application ou importez les applications
+                d'exemple (Grist, Tchap, GitHub, Mattermost, LinkedIn).
+                Les utilisateurs pourront ensuite y stocker leurs identifiants.
+              </p>
+              <button
+                className="fr-btn fr-mt-2w"
+                onClick={handleImportSamples}
+                disabled={importing}
+              >
+                {importing ? "Import en cours..." : "Importer les 5 applications d'exemple"}
+              </button>
+            </div>
+          ) : (
+            <div className="fr-table">
+              <table>
+                <thead>
                   <tr>
-                    <td colSpan={6} style={{ textAlign: "center" }}>Aucune application</td>
+                    <th>Nom</th>
+                    <th>Slug</th>
+                    <th>Client ID</th>
+                    <th>Statut</th>
+                    <th>Variables</th>
+                    <th>Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {apps.map((app) => (
+                    <tr key={app.id}>
+                      <td>{app.name}</td>
+                      <td><code>{app.friendly_slug}</code></td>
+                      <td><code>{app.client_id}</code></td>
+                      <td>
+                        <span className={`fr-badge fr-badge--sm ${app.status === "active" ? "fr-badge--success" : "fr-badge--warning"}`}>
+                          {app.status}
+                        </span>
+                      </td>
+                      <td>{app.required_variables.length}</td>
+                      <td>
+                        <button
+                          className="fr-btn fr-btn--tertiary-no-outline fr-btn--sm"
+                          onClick={() => navigate(`/admin/apps/${app.id}/edit`)}
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          className="fr-btn fr-btn--tertiary-no-outline fr-btn--sm"
+                          style={{ color: "var(--text-default-error)" }}
+                          onClick={() => handleDelete(app.id, app.name)}
+                        >
+                          Supprimer
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -183,7 +214,9 @@ export default function AdminPage() {
                 ))}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: "center" }}>Aucun utilisateur provisionné</td>
+                    <td colSpan={3} style={{ textAlign: "center" }}>
+                      Aucun utilisateur — les utilisateurs apparaîtront ici après avoir configuré leurs premiers identifiants
+                    </td>
                   </tr>
                 )}
               </tbody>
