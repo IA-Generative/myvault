@@ -1,7 +1,10 @@
 /**
  * Application detail page with two tabs:
- * - "Accès manuel" : URL, login, password — for browser-based login
- * - "Accès API" : tokens, keys, endpoints — for programmatic access
+ * - "Accès manuel" : app URL, login, password — for browser-based login
+ * - "Accès API" : tokens, keys, API endpoints — for programmatic/agent access
+ *
+ * Known API endpoints are pre-filled and read-only.
+ * app_url is used by the "Ouvrir" button on the vault page.
  */
 
 import { useEffect, useState, useCallback } from "react";
@@ -12,28 +15,36 @@ import { userApi, type AppListItem, type VariableDefinition } from "../services/
 
 const API_TYPES = new Set(["api_key", "secret", "oauth_token", "certificate"]);
 const MANUAL_TYPES = new Set(["login", "password", "email"]);
-// url and text can be in either category depending on the key name
 const API_KEY_PATTERNS = /api|token|endpoint|secret|key|client/i;
 
-function classifyVariable(v: VariableDefinition): "manual" | "api" | "both" {
+function classifyVariable(v: VariableDefinition): "manual" | "api" {
+  // app_url is always manual (the website to open in browser)
+  if (v.key === "app_url") return "manual";
+  // Explicit API types
   if (API_TYPES.has(v.var_type)) return "api";
+  // Explicit manual types
   if (MANUAL_TYPES.has(v.var_type)) return "manual";
+  // URLs: classify by key name
   if (v.var_type === "url") {
-    return API_KEY_PATTERNS.test(v.key) ? "api" : "both";
+    return API_KEY_PATTERNS.test(v.key) ? "api" : "manual";
   }
-  // text, number, boolean, select, etc. — classify by key name
-  if (API_KEY_PATTERNS.test(v.key)) return "api";
-  return "both";
+  // text, number, etc. — classify by key name
+  return API_KEY_PATTERNS.test(v.key) ? "api" : "manual";
+}
+
+function isReadOnlyField(v: VariableDefinition): boolean {
+  // API endpoints with a known default value are read-only
+  if (v.var_type === "url" && v.key !== "app_url" && v.default_value) {
+    return true;
+  }
+  return false;
 }
 
 function filterVariables(
   variables: VariableDefinition[],
   tab: "manual" | "api"
 ): VariableDefinition[] {
-  return variables.filter((v) => {
-    const cat = classifyVariable(v);
-    return cat === tab || cat === "both";
-  });
+  return variables.filter((v) => classifyVariable(v) === tab);
 }
 
 function hasVariablesForTab(
@@ -64,7 +75,6 @@ export default function AppDetailPage() {
       const found = apps.find((a) => a.friendly_slug === appSlug);
       if (found) {
         setApp(found);
-        // Default to the tab that has variables
         if (!hasVariablesForTab(found.required_variables, "manual") &&
             hasVariablesForTab(found.required_variables, "api")) {
           setTab("api");
@@ -212,14 +222,27 @@ export default function AppDetailPage() {
         </div>
       )}
 
-      {/* Tab description */}
-      {showTabs && (
-        <p className="fr-text--sm fr-mb-2w" style={{ color: "var(--text-mention-grey)" }}>
-          {tab === "manual"
-            ? "Identifiants pour vous connecter via le navigateur (login, mot de passe, URL)."
-            : "Identifiants pour l'accès programmatique (clés API, tokens, endpoints)."
-          }
-        </p>
+      {/* Tab explanations */}
+      {showTabs && tab === "manual" && (
+        <div className="fr-callout fr-callout--brown-caramel fr-mb-2w" style={{ padding: "0.75rem 1rem" }}>
+          <p className="fr-text--sm" style={{ margin: 0 }}>
+            <strong>Accès manuel</strong> — Vos identifiants pour vous connecter
+            à {app.name} depuis votre navigateur (login, mot de passe).
+            Utilisez le bouton <strong>Ouvrir</strong> sur la page d'accueil pour
+            ouvrir le site et avoir vos identifiants à portée de main.
+          </p>
+        </div>
+      )}
+      {showTabs && tab === "api" && (
+        <div className="fr-callout fr-callout--brown-caramel fr-mb-2w" style={{ padding: "0.75rem 1rem" }}>
+          <p className="fr-text--sm" style={{ margin: 0 }}>
+            <strong>Accès API</strong> — Ces identifiants permettent à vos agents IA
+            (tools OpenWebUI, pipelines MirAI) d'accéder aux données
+            de {app.name} en votre nom, de manière sécurisée et automatisée.
+            Les endpoints pré-remplis sont ceux utilisés par l'écosystème et ne doivent
+            pas être modifiés.
+          </p>
+        </div>
       )}
 
       <form
@@ -229,15 +252,24 @@ export default function AppDetailPage() {
         }}
       >
         <div className="fr-grid-row fr-grid-row--gutters">
-          {currentVariables.map((variable) => (
-            <div className="fr-col-12 fr-col-md-6" key={variable.key}>
-              <VariableField
-                variable={variable}
-                value={values[variable.key] ?? ""}
-                onChange={handleChange}
-              />
-            </div>
-          ))}
+          {currentVariables.map((variable) => {
+            const readOnly = isReadOnlyField(variable);
+            return (
+              <div className="fr-col-12 fr-col-md-6" key={variable.key}>
+                <VariableField
+                  variable={variable}
+                  value={values[variable.key] ?? ""}
+                  onChange={handleChange}
+                  readOnly={readOnly}
+                />
+                {readOnly && (
+                  <p className="fr-text--xs" style={{ color: "var(--text-mention-grey)", marginTop: "-0.5rem" }}>
+                    Pré-configuré — ne pas modifier
+                  </p>
+                )}
+              </div>
+            );
+          })}
           {currentVariables.length === 0 && (
             <div className="fr-col-12">
               <p className="fr-text--sm" style={{ color: "var(--text-mention-grey)", fontStyle: "italic" }}>

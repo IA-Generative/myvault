@@ -25,6 +25,12 @@ function StatusBadge({ app }: { app: AppListItem }) {
 }
 
 function getAppTargetUrl(app: AppListItem, entry: VaultEntry): string | null {
+  // Prefer app_url (the website), fall back to first url variable
+  if (entry.values["app_url"]) return entry.values["app_url"];
+  // Also check default values
+  const appUrlVar = app.required_variables.find((v) => v.key === "app_url");
+  if (appUrlVar?.default_value) return appUrlVar.default_value;
+  // Fallback: first url-type variable with a value
   for (const v of app.required_variables) {
     if (v.var_type === "url" && entry.values[v.key]) {
       return entry.values[v.key];
