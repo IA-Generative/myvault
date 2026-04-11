@@ -131,16 +131,11 @@ Chaque accès à un secret est journalisé :
 
 ### ADR-001 : Chiffrement applicatif plutôt qu'OpenBao/Infisical
 
-**Contexte** : Le prompt demandait d'évaluer OpenBao, Infisical, et une solution custom.
+**Décision** : Chiffrement applicatif (PostgreSQL + AES-256-GCM) plutôt qu'OpenBao ou Infisical.
 
-**Décision** : Chiffrement applicatif (PostgreSQL + AES-256-GCM).
+**Résumé** : L'unseal ceremony d'OpenBao est disproportionnée pour un coffre-fort utilisateur, Infisical ajoute une dépendance externe. Le chiffrement applicatif avec AES-256-GCM + HKDF offre une sécurité équivalente pour ce modèle de menace, en ~50 lignes de code auditables, sans dépendance supplémentaire. Réversible si le besoin évolue (rotation automatique, PKI, etc.).
 
-**Raison** :
-- OpenBao impose une unseal ceremony complexe, surdimensionnée pour un coffre-fort utilisateur
-- Infisical ajoute une dépendance externe et une complexité opérationnelle
-- Le chiffrement applicatif est simple, auditable, sans dépendance externe
-- La dérivation par utilisateur (HKDF) offre une isolation cryptographique
-- PostgreSQL est déjà présent dans l'infrastructure
+> **Document complet** : [ADR-001 — Choix du moteur de secrets](adr/ADR-001-choix-moteur-secrets.md)
 
 ### ADR-002 : React + DSFR plutôt que Vue
 
