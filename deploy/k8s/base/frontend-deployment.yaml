@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myvault-frontend
+  namespace: myvault
+  labels:
+    app: myvault-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myvault-frontend
+  template:
+    metadata:
+      labels:
+        app: myvault-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: myvault-frontend:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myvault-frontend
+  namespace: myvault
+spec:
+  selector:
+    app: myvault-frontend
+  ports:
+    - port: 3000
+      targetPort: 3000

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myvault-config
+  namespace: myvault
+data:
+  POSTGRES_HOST: myvault-postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: myvault
+  MYVAULT_LOG_LEVEL: info
+  MYVAULT_DEV_MODE: "false"
+  MYVAULT_CORS_ORIGINS: "https://myvault.example.com"
