@@ -1,13 +1,47 @@
 /**
- * Application detail page: form to manage credentials for a specific app.
- * Shows variable fields per type, toggle enable/disable, check connection.
+ * Application detail page with two tabs:
+ * - "Accès manuel" : URL, login, password — for browser-based login
+ * - "Accès API" : tokens, keys, endpoints — for programmatic access
  */
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import VariableField from "../components/VariableField";
 import ConnectionChecker from "../components/ConnectionChecker";
-import { userApi, type AppListItem } from "../services/api";
+import { userApi, type AppListItem, type VariableDefinition } from "../services/api";
+
+const API_TYPES = new Set(["api_key", "secret", "oauth_token", "certificate"]);
+const MANUAL_TYPES = new Set(["login", "password", "email"]);
+// url and text can be in either category depending on the key name
+const API_KEY_PATTERNS = /api|token|endpoint|secret|key|client/i;
+
+function classifyVariable(v: VariableDefinition): "manual" | "api" | "both" {
+  if (API_TYPES.has(v.var_type)) return "api";
+  if (MANUAL_TYPES.has(v.var_type)) return "manual";
+  if (v.var_type === "url") {
+    return API_KEY_PATTERNS.test(v.key) ? "api" : "both";
+  }
+  // text, number, boolean, select, etc. — classify by key name
+  if (API_KEY_PATTERNS.test(v.key)) return "api";
+  return "both";
+}
+
+function filterVariables(
+  variables: VariableDefinition[],
+  tab: "manual" | "api"
+): VariableDefinition[] {
+  return variables.filter((v) => {
+    const cat = classifyVariable(v);
+    return cat === tab || cat === "both";
+  });
+}
+
+function hasVariablesForTab(
+  variables: VariableDefinition[],
+  tab: "manual" | "api"
+): boolean {
+  return filterVariables(variables, tab).length > 0;
+}
 
 export default function AppDetailPage() {
   const { appSlug } = useParams<{ appSlug: string }>();
@@ -18,6 +52,7 @@ export default function AppDetailPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [tab, setTab] = useState<"manual" | "api">("manual");
 
   useEffect(() => {
     if (!appSlug) return;
@@ -27,14 +62,20 @@ export default function AppDetailPage() {
       userApi.getMyEntry(appSlug),
     ]).then(([apps, entry]) => {
       const found = apps.find((a) => a.friendly_slug === appSlug);
-      if (found) setApp(found);
+      if (found) {
+        setApp(found);
+        // Default to the tab that has variables
+        if (!hasVariablesForTab(found.required_variables, "manual") &&
+            hasVariablesForTab(found.required_variables, "api")) {
+          setTab("api");
+        }
+      }
 
       if ("entry_id" in entry) {
         setValues(entry.values);
         setEnabled(entry.enabled);
         setIsNew(false);
       } else {
-        // Pre-fill defaults
         const defaults: Record<string, string> = {};
         found?.required_variables.forEach((v) => {
           if (v.default_value) defaults[v.key] = v.default_value;
@@ -82,6 +123,13 @@ export default function AppDetailPage() {
     );
   }
 
+  const hasManual = hasVariablesForTab(app.required_variables, "manual");
+  const hasApi = hasVariablesForTab(app.required_variables, "api");
+  const showTabs = hasManual && hasApi;
+  const currentVariables = showTabs
+    ? filterVariables(app.required_variables, tab)
+    : app.required_variables;
+
   return (
     <>
       <nav className="fr-breadcrumb" aria-label="vous êtes ici :">
@@ -96,9 +144,12 @@ export default function AppDetailPage() {
       </nav>
 
       <div className="fr-grid-row fr-grid-row--gutters fr-grid-row--middle fr-mb-2w">
-        <div className="fr-col">
-          <h1>{app.name}</h1>
-          <p>{app.description}</p>
+        <div className="fr-col" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {app.icon_url && <img src={app.icon_url} alt="" style={{ width: 32, height: 32 }} />}
+          <div>
+            <h1 style={{ marginBottom: 0 }}>{app.name}</h1>
+            <p className="fr-text--sm" style={{ margin: 0, color: "var(--text-mention-grey)" }}>{app.description}</p>
+          </div>
         </div>
         {!isNew && (
           <div className="fr-col-auto">
@@ -122,17 +173,53 @@ export default function AppDetailPage() {
         <div className="fr-alert fr-alert--info fr-mb-2w">
           <h3 className="fr-alert__title">Première configuration</h3>
           <p>
-            Remplissez les champs ci-dessous avec vos identifiants pour cette application,
+            Remplissez les champs ci-dessous avec vos identifiants,
             puis cliquez sur <strong>Sauvegarder</strong>.
-            Vos données seront chiffrées et stockées en toute sécurité.
+            Vos données seront chiffrées et accessibles uniquement par vous.
           </p>
         </div>
       )}
 
       {error && (
-        <div className="fr-alert fr-alert--error fr-mb-2w">
-          <p>{error}</p>
+        <div className="fr-alert fr-alert--error fr-mb-2w"><p>{error}</p></div>
+      )}
+
+      {/* Tabs */}
+      {showTabs && (
+        <div className="fr-tabs fr-mb-2w">
+          <ul className="fr-tabs__list" role="tablist">
+            <li role="presentation">
+              <button
+                className="fr-tabs__tab"
+                role="tab"
+                aria-selected={tab === "manual"}
+                onClick={() => setTab("manual")}
+              >
+                Accès manuel
+              </button>
+            </li>
+            <li role="presentation">
+              <button
+                className="fr-tabs__tab"
+                role="tab"
+                aria-selected={tab === "api"}
+                onClick={() => setTab("api")}
+              >
+                Accès API
+              </button>
+            </li>
+          </ul>
         </div>
+      )}
+
+      {/* Tab description */}
+      {showTabs && (
+        <p className="fr-text--sm fr-mb-2w" style={{ color: "var(--text-mention-grey)" }}>
+          {tab === "manual"
+            ? "Identifiants pour vous connecter via le navigateur (login, mot de passe, URL)."
+            : "Identifiants pour l'accès programmatique (clés API, tokens, endpoints)."
+          }
+        </p>
       )}
 
       <form
@@ -142,7 +229,7 @@ export default function AppDetailPage() {
         }}
       >
         <div className="fr-grid-row fr-grid-row--gutters">
-          {app.required_variables.map((variable) => (
+          {currentVariables.map((variable) => (
             <div className="fr-col-12 fr-col-md-6" key={variable.key}>
               <VariableField
                 variable={variable}
@@ -151,21 +238,22 @@ export default function AppDetailPage() {
               />
             </div>
           ))}
+          {currentVariables.length === 0 && (
+            <div className="fr-col-12">
+              <p className="fr-text--sm" style={{ color: "var(--text-mention-grey)", fontStyle: "italic" }}>
+                Aucun champ pour ce mode d'accès.
+              </p>
+            </div>
+          )}
         </div>
 
-        <div className="fr-mt-3w" style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <button
-            type="submit"
-            className="fr-btn"
-            disabled={saving}
-          >
+        <div className="fr-mt-3w" style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+          <button type="submit" className="fr-btn" disabled={saving}>
             {saving ? "Sauvegarde..." : "Sauvegarder"}
           </button>
-
           <Link to={`/bridge/${appSlug}`} className="fr-btn fr-btn--secondary">
-            Pont de configuration
+            Import / Export
           </Link>
-
           {saved && (
             <span className="fr-valid-text" role="status">
               Sauvegardé avec succès
