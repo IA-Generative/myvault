@@ -46,6 +46,7 @@ async def create_app(db: AsyncSession, data: AppCreate, created_by: str) -> Appl
             description=var.description,
             default_value=var.default,
             choices=var.choices,
+            category=var.category,
             sort_order=idx,
         )
         db.add(rv)
@@ -190,6 +191,7 @@ async def import_keycloak(
                 required=v.get("required", True),
                 description=v.get("description", ""),
                 default_value=v.get("default", ""),
+                category=v.get("category", "both"),
             )
             for v in variables
         ]
@@ -224,6 +226,7 @@ async def export_keycloak(db: AsyncSession) -> dict:
                 "required": v.required,
                 "description": v.description,
                 "default": v.default_value,
+                "category": v.category,
             }
             for v in app.required_variables
         ]

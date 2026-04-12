@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 *.pem
+
+# === Private data (exports, seeds) ===
+data/
 *.key
 *.crt
 *.p12
