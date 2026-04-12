@@ -5,9 +5,24 @@
 
 import { UserManager, WebStorageStateStore, type User } from "oidc-client-ts";
 
-const OIDC_AUTHORITY = import.meta.env.VITE_OIDC_AUTHORITY || "http://localhost:8082/realms/openwebui";
+// Auto-detect OIDC authority from environment:
+// - Vite env var (build-time) takes precedence
+// - Otherwise, derive from current hostname pattern
+function detectAuthority(): string {
+  if (import.meta.env.VITE_OIDC_AUTHORITY) return import.meta.env.VITE_OIDC_AUTHORITY;
+  const host = window.location.hostname;
+  // Local dev: Keycloak on port 8082
+  if (host === "localhost" || host === "127.0.0.1") {
+    return "http://localhost:8082/realms/openwebui";
+  }
+  // K8s/prod: derive SSO host from app host (myvault.X → mysso.X)
+  const domain = host.replace(/^[^.]+\./, "");
+  return `https://mysso.${domain}/realms/openwebui`;
+}
+
+const OIDC_AUTHORITY = detectAuthority();
 const OIDC_CLIENT_ID = import.meta.env.VITE_OIDC_CLIENT_ID || "myvault";
-const OIDC_REDIRECT_URI = import.meta.env.VITE_OIDC_REDIRECT_URI || `${window.location.origin}/`;
+const OIDC_REDIRECT_URI = `${window.location.origin}/`;
 
 const userManager = new UserManager({
   authority: OIDC_AUTHORITY,
