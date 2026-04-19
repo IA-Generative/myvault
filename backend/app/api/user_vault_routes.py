@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.core.database import get_db
+from app.core.master_password import require_vault_key
 from app.models.schemas import EntryResponse, EntrySave
 from app.services import vault_service
 
@@ -38,9 +39,10 @@ async def get_my_entry(
     app_slug: str,
     user: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    mp_key: bytes | None = Depends(require_vault_key),
 ):
     """Get my credentials for a specific application."""
-    entry = await vault_service.get_user_entry(db, user.user_id, app_slug)
+    entry = await vault_service.get_user_entry(db, user.user_id, app_slug, mp_key)
     if entry is None:
         return {"values": {}, "configured": False}
     return entry
@@ -52,11 +54,12 @@ async def save_my_entry(
     body: EntrySave,
     user: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    mp_key: bytes | None = Depends(require_vault_key),
 ):
     """Save or update my credentials for an application."""
     try:
         return await vault_service.save_user_entry(
-            db, user.user_id, app_slug, body.values, body.enabled
+            db, user.user_id, app_slug, body.values, body.enabled, mp_key
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -81,6 +84,7 @@ async def check_my_connection(
     app_slug: str,
     user: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    mp_key: bytes | None = Depends(require_vault_key),
 ):
     """Test the API connection using stored credentials.
 
@@ -89,7 +93,7 @@ async def check_my_connection(
     """
     import httpx
 
-    entry = await vault_service.get_user_entry(db, user.user_id, app_slug)
+    entry = await vault_service.get_user_entry(db, user.user_id, app_slug, mp_key)
     if entry is None:
         raise HTTPException(status_code=404, detail="Aucun identifiant configuré")
 
@@ -163,6 +167,7 @@ async def _generic_api_check(app, values: dict) -> dict:
 async def list_all_my_entries(
     user: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    mp_key: bytes | None = Depends(require_vault_key),
 ):
     """Get all my vault entries across all applications."""
-    return await vault_service.get_all_user_entries(db, user.user_id)
+    return await vault_service.get_all_user_entries(db, user.user_id, mp_key)

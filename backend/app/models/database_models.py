@@ -119,3 +119,23 @@ class PersonalEntry(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
+
+
+class UserSecurity(Base):
+    """Per-user security settings — currently the master password state.
+
+    When enabled, vault entries are encrypted with a key derived from the user's
+    master password; the password is never stored in clear text, only its bcrypt
+    hash (for verification) and a KDF salt (for deriving the encryption key).
+    """
+
+    __tablename__ = "user_security"
+
+    user_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    master_password_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    master_password_hash: Mapped[str] = mapped_column(Text, default="")
+    master_password_salt: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )

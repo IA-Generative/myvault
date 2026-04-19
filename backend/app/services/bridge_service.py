@@ -10,10 +10,14 @@ from app.services.app_service import get_app_by_slug
 
 
 async def export_bridge(
-    db: AsyncSession, user_id: str, app_slug: str, fmt: str = "json"
+    db: AsyncSession,
+    user_id: str,
+    app_slug: str,
+    fmt: str = "json",
+    mp_key: bytes | None = None,
 ) -> dict[str, Any] | None:
     """Export user's credentials for an app in the requested format."""
-    entry = await get_user_entry(db, user_id, app_slug)
+    entry = await get_user_entry(db, user_id, app_slug, mp_key)
     if entry is None:
         return None
 

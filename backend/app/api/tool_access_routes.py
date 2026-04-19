@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import validate_client_credentials
 from app.core.database import get_db
+from app.core.master_password import get_session_key, get_user_security
 from app.models.schemas import EnrollRequest
 from app.services import app_service, vault_service
 
@@ -34,7 +35,22 @@ async def read_user_credentials(
     """Read a user's decrypted credentials for a tool (machine-to-machine)."""
     client = await _authenticate_client(x_client_id, x_client_secret, db)
 
-    creds = await vault_service.get_credentials_for_tool(db, app_slug, user_id)
+    # If the user has enabled a master password, the tool can only read
+    # credentials while the user has an active unlock session.
+    sec = await get_user_security(db, user_id)
+    mp_key: bytes | None = None
+    if sec is not None and sec.master_password_enabled:
+        mp_key = get_session_key(user_id)
+        if mp_key is None:
+            raise HTTPException(
+                status_code=423,
+                detail={
+                    "error": "vault_locked",
+                    "message": "User vault is locked — user must unlock via web UI",
+                },
+            )
+
+    creds = await vault_service.get_credentials_for_tool(db, app_slug, user_id, mp_key)
     if creds is None:
         raise HTTPException(
             status_code=404,

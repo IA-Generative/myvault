@@ -182,6 +182,32 @@ class UserSummary(BaseModel):
     last_activity: datetime | None = None
 
 
+# --- Master password ---
+
+
+class SecurityStatus(BaseModel):
+    master_password_enabled: bool
+    unlocked: bool
+    unlock_ttl_seconds: int
+
+
+class MasterPasswordEnable(BaseModel):
+    password: str = Field(min_length=8)
+
+
+class MasterPasswordDisable(BaseModel):
+    password: str
+
+
+class MasterPasswordChange(BaseModel):
+    old_password: str
+    new_password: str = Field(min_length=8)
+
+
+class MasterPasswordUnlock(BaseModel):
+    password: str
+
+
 # --- Auto-enrollment ---
 
 

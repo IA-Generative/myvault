@@ -65,7 +65,7 @@ async def get_user_apps(
 
 
 async def get_user_entry(
-    db: AsyncSession, user_id: str, app_slug: str
+    db: AsyncSession, user_id: str, app_slug: str, mp_key: bytes | None = None
 ) -> dict | None:
     """Get a user's vault entry for a specific app, decrypting secret fields."""
     app = await _get_app_by_slug(db, app_slug)
@@ -86,7 +86,7 @@ async def get_user_entry(
     decrypted_values = {}
     for key, value in entry.values.items():
         if key in encrypted_keys and value:
-            decrypted_values[key] = decrypt_value(value, user_id)
+            decrypted_values[key] = decrypt_value(value, user_id, mp_key)
         else:
             decrypted_values[key] = value
 
@@ -106,7 +106,12 @@ async def get_user_entry(
 
 
 async def save_user_entry(
-    db: AsyncSession, user_id: str, app_slug: str, values: dict[str, str], enabled: bool
+    db: AsyncSession,
+    user_id: str,
+    app_slug: str,
+    values: dict[str, str],
+    enabled: bool,
+    mp_key: bytes | None = None,
 ) -> dict:
     """Save or update a user's vault entry, encrypting secret fields."""
     app = await _get_app_by_slug(db, app_slug)
@@ -117,7 +122,7 @@ async def save_user_entry(
     stored_values = {}
     for key, value in values.items():
         if key in encrypted_keys and value:
-            stored_values[key] = encrypt_value(value, user_id)
+            stored_values[key] = encrypt_value(value, user_id, mp_key)
         else:
             stored_values[key] = value
 
@@ -186,7 +191,7 @@ async def toggle_entry(
 
 
 async def get_all_user_entries(
-    db: AsyncSession, user_id: str
+    db: AsyncSession, user_id: str, mp_key: bytes | None = None
 ) -> list[dict]:
     """Get all vault entries for a user across all apps."""
     result = await db.execute(
@@ -203,7 +208,7 @@ async def get_all_user_entries(
         decrypted = {}
         for key, value in entry.values.items():
             if key in encrypted_keys and value:
-                decrypted[key] = decrypt_value(value, user_id)
+                decrypted[key] = decrypt_value(value, user_id, mp_key)
             else:
                 decrypted[key] = value
 
@@ -223,7 +228,7 @@ async def get_all_user_entries(
 
 
 async def get_credentials_for_tool(
-    db: AsyncSession, app_slug: str, user_id: str
+    db: AsyncSession, app_slug: str, user_id: str, mp_key: bytes | None = None
 ) -> dict | None:
     """Machine-to-machine: retrieve a user's credentials for a tool."""
     app = await _get_app_by_slug(db, app_slug)
@@ -245,7 +250,7 @@ async def get_credentials_for_tool(
     decrypted = {}
     for key, value in entry.values.items():
         if key in encrypted_keys and value:
-            decrypted[key] = decrypt_value(value, user_id)
+            decrypted[key] = decrypt_value(value, user_id, mp_key)
         else:
             decrypted[key] = value
 

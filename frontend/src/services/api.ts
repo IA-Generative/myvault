@@ -6,7 +6,32 @@ import { getAccessToken } from "./auth";
 
 const BASE = "/api/v1";
 
+export class VaultLockedError extends Error {
+  constructor(message = "Vault locked") {
+    super(message);
+    this.name = "VaultLockedError";
+  }
+}
+
+type LockedHandler = () => Promise<boolean>;
+let lockedHandler: LockedHandler | null = null;
+
+/** Register a global handler that the UI uses to prompt for the master password
+ *  when the backend replies 423. Returns true if unlock succeeded, false if
+ *  the user cancelled. */
+export function setLockedHandler(handler: LockedHandler | null): void {
+  lockedHandler = handler;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  return requestOnce<T>(path, options, true);
+}
+
+async function requestOnce<T>(
+  path: string,
+  options: RequestInit | undefined,
+  allowUnlockRetry: boolean,
+): Promise<T> {
   const token = await getAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -17,9 +42,22 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  if (res.status === 423) {
+    if (allowUnlockRetry && lockedHandler) {
+      const unlocked = await lockedHandler();
+      if (unlocked) {
+        return requestOnce<T>(path, options, false);
+      }
+    }
+    throw new VaultLockedError("Vault verrouillé");
+  }
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || res.statusText);
+    const detail =
+      typeof error.detail === "string"
+        ? error.detail
+        : error.detail?.message || res.statusText;
+    throw new Error(detail);
   }
   return res.json();
 }
@@ -161,6 +199,45 @@ export const bridgeApi = {
       `/me/bridge/${appSlug}/import`,
       { method: "POST", body: JSON.stringify({ format, data }) }
     ),
+};
+
+// --- Security (master password) API ---
+
+export interface SecurityStatus {
+  master_password_enabled: boolean;
+  unlocked: boolean;
+  unlock_ttl_seconds: number;
+}
+
+export const securityApi = {
+  getStatus: () => request<SecurityStatus>("/me/security"),
+
+  enable: (password: string) =>
+    request<SecurityStatus>("/me/security/enable", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
+
+  disable: (password: string) =>
+    request<SecurityStatus>("/me/security/disable", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
+
+  change: (oldPassword: string, newPassword: string) =>
+    request<SecurityStatus>("/me/security/change", {
+      method: "POST",
+      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    }),
+
+  unlock: (password: string) =>
+    request<SecurityStatus>("/me/security/unlock", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
+
+  lock: () =>
+    request<{ status: string }>("/me/security/lock", { method: "POST" }),
 };
 
 // --- Admin API ---

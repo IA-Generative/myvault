@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.core.database import get_db
+from app.core.master_password import require_vault_key
 from app.models.schemas import BridgeImportRequest
 from app.services import bridge_service
 
@@ -17,9 +18,10 @@ async def export_credentials(
     format: str = Query(default="json", regex="^(json|env|yaml)$"),
     user: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    mp_key: bytes | None = Depends(require_vault_key),
 ):
     """Export user credentials for an app in the requested format."""
-    result = await bridge_service.export_bridge(db, user.user_id, app_slug, format)
+    result = await bridge_service.export_bridge(db, user.user_id, app_slug, format, mp_key)
     if result is None:
         raise HTTPException(status_code=404, detail="No credentials found")
     return result

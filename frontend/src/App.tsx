@@ -10,6 +10,8 @@ import AdminAppFormPage from "./pages/AdminAppFormPage";
 import BridgePage from "./pages/BridgePage";
 import PopupCredentialsPage from "./pages/PopupCredentialsPage";
 import GuidePage from "./pages/GuidePage";
+import SecurityPage from "./pages/SecurityPage";
+import { SecurityProvider } from "./services/security-context";
 import { login, logout, getUser, handleCallback, type User } from "./services/auth";
 
 function App() {
@@ -115,10 +117,11 @@ function App() {
 
   const isAppsSection = location.pathname === "/" || location.pathname.startsWith("/app/") || location.pathname.startsWith("/bridge/");
   const isPersonalSection = location.pathname === "/personal";
+  const isSecuritySection = location.pathname === "/security";
   const isAdminSection = location.pathname.startsWith("/admin");
 
   return (
-    <>
+    <SecurityProvider>
       <Header
         brandTop={<>RÉPUBLIQUE<br />FRANÇAISE</>}
         homeLinkProps={{ href: "/", title: "MyVault" }}
@@ -142,6 +145,7 @@ function App() {
         navigation={[
           { text: "Mes applications", linkProps: { href: "/" }, isActive: isAppsSection },
           { text: "Coffre personnel", linkProps: { href: "/personal" }, isActive: isPersonalSection },
+          { text: "Sécurité", linkProps: { href: "/security" }, isActive: isSecuritySection },
           { text: "Administration", linkProps: { href: "/admin" }, isActive: isAdminSection },
           { text: "Aide", linkProps: { href: "/guide" }, isActive: location.pathname === "/guide" },
         ]}
@@ -151,6 +155,7 @@ function App() {
         <Routes>
           <Route path="/" element={<VaultPage />} />
           <Route path="/personal" element={<PersonalVaultPage />} />
+          <Route path="/security" element={<SecurityPage />} />
           <Route path="/app/:appSlug" element={<AppDetailPage />} />
           <Route path="/bridge/:appSlug" element={<BridgePage />} />
           <Route path="/admin" element={<AdminPage />} />
@@ -169,7 +174,7 @@ function App() {
           { text: "Mentions légales", linkProps: { href: "#" } },
         ]}
       />
-    </>
+    </SecurityProvider>
   );
 }
 
