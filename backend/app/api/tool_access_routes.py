@@ -35,6 +35,14 @@ async def read_user_credentials(
     """Read a user's decrypted credentials for a tool (machine-to-machine)."""
     client = await _authenticate_client(x_client_id, x_client_secret, db)
 
+    # A client may only read credentials for its OWN application.
+    app = await app_service.get_app_by_slug(db, app_slug)
+    if app is None or app.client_id != client.client_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Client not authorized for this application",
+        )
+
     # If the user has enabled a master password, the tool can only read
     # credentials while the user has an active unlock session.
     sec = await get_user_security(db, user_id)
@@ -91,7 +99,15 @@ async def check_user_credentials(
     db: AsyncSession = Depends(get_db),
 ):
     """Check if a user has valid credentials for an app."""
-    await _authenticate_client(x_client_id, x_client_secret, db)
+    client = await _authenticate_client(x_client_id, x_client_secret, db)
+
+    # A client may only probe credentials for its OWN application.
+    app = await app_service.get_app_by_slug(db, app_slug)
+    if app is None or app.client_id != client.client_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Client not authorized for this application",
+        )
 
     creds = await vault_service.get_credentials_for_tool(db, app_slug, user_id)
     if creds is None:
