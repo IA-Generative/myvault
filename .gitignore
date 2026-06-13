@@ -4,6 +4,9 @@
 !.env.example
 *.pem
 
+# Sorties locales sensibles (audit, homologation) — ne pas committer
+private/
+
 # === Private data (exports, seeds) ===
 data/
 *.key
