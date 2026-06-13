@@ -206,11 +206,15 @@
     <div class="myvault-status loading">Chargement...</div>
     <div class="myvault-body"></div>
     <div class="myvault-footer">
-      <a class="myvault-link" href="${myvaultUrl}/app/${appSlug}" target="_blank" rel="noopener">
+      <a class="myvault-link" href="#" target="_blank" rel="noopener">
         Modifier dans MyVault &#8599;
       </a>
     </div>
   `;
+  // Set the link target via property (no HTML parsing → no attribute injection
+  // from the embedder-controlled data-app value).
+  const footerLink = panel.querySelector(".myvault-link");
+  if (footerLink) footerLink.href = `${myvaultUrl}/app/${encodeURIComponent(appSlug)}`;
   shadow.appendChild(panel);
 
   // Toggle panel
@@ -237,9 +241,10 @@
     bodyEl.innerHTML = "";
 
     try {
-      const resp = await fetch(`${myvaultUrl}/api/v1/me/apps/${appSlug}/entries`, {
-        credentials: "include",
-      });
+      const resp = await fetch(
+        `${myvaultUrl}/api/v1/me/apps/${encodeURIComponent(appSlug)}/entries`,
+        { credentials: "include" }
+      );
 
       if (!resp.ok) {
         statusEl.className = "myvault-status error";

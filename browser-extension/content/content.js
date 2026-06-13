@@ -146,11 +146,14 @@
     </div>
     <div class="myvault-ext-body">Chargement...</div>
     <div class="myvault-ext-foot">
-      <a href="${myvaultUrl}/app/${app.friendly_slug}" target="_blank" rel="noopener">
+      <a href="#" target="_blank" rel="noopener">
         Modifier dans MyVault &#8599;
       </a>
     </div>
   `;
+  // Set the link target via property (no HTML parsing → no attribute injection).
+  const footLink = panel.querySelector(".myvault-ext-foot a");
+  if (footLink) footLink.href = `${myvaultUrl}/app/${app.friendly_slug}`;
   shadow.appendChild(panel);
 
   let isOpen = false;
