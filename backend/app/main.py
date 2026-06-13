@@ -20,13 +20,22 @@ logging.basicConfig(
     format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
 )
 
+# Known weak/default master keys that must never be used in production.
+_WEAK_MASTER_KEYS = {
+    "changeme_generate_with_openssl_rand_hex_32",
+    "0123456789abcdef" * 4,
+}
+
+# In production, hide the interactive API docs / OpenAPI schema.
+_docs_enabled = not settings.is_production
+
 app = FastAPI(
     title="MyVault",
     description="Coffre-fort de credentials utilisateur souverain",
     version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
+    docs_url="/api/docs" if _docs_enabled else None,
+    redoc_url="/api/redoc" if _docs_enabled else None,
+    openapi_url="/api/openapi.json" if _docs_enabled else None,
 )
 
 app.add_middleware(
@@ -52,6 +61,20 @@ async def on_startup():
     from app.models import database_models  # noqa: F401
 
     logger = logging.getLogger("myvault")
+
+    # Refuse to start in production with an unsafe configuration.
+    if settings.is_production:
+        key = settings.myvault_master_key
+        if key in _WEAK_MASTER_KEYS or len(key) < 64:
+            raise RuntimeError(
+                "MYVAULT_MASTER_KEY non configurée ou trop faible en production "
+                "— générer avec `openssl rand -hex 32`."
+            )
+        if settings.myvault_dev_mode:
+            raise RuntimeError(
+                "MYVAULT_DEV_MODE doit être désactivé en production "
+                "(il contourne l'authentification)."
+            )
 
     # Always ensure tables exist (safe: CREATE TABLE IF NOT EXISTS)
     try:

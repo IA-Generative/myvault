@@ -45,6 +45,15 @@ class Settings(BaseSettings):
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.myvault_cors_origins.split(",")]
 
+    # Environment: "development" (default) or "production".
+    # In production the app refuses to start with a default/weak master key or
+    # with dev mode enabled (see app.main.on_startup).
+    myvault_environment: str = "development"
+
+    @property
+    def is_production(self) -> bool:
+        return self.myvault_environment.strip().lower().startswith("prod")
+
     # Development mode
     myvault_dev_mode: bool = False
     myvault_dev_user_id: str = "dev-user-001"
