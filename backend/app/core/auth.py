@@ -1,5 +1,6 @@
 """Authentication: OIDC token validation and dev-mode bypass."""
 
+import logging
 from dataclasses import dataclass
 
 import httpx
@@ -7,6 +8,8 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import settings
+
+logger = logging.getLogger("myvault.auth")
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -97,9 +100,29 @@ def _decode_token(token: str) -> dict:
             token,
             rsa_key,
             algorithms=["RS256"],
-            audience=settings.oidc_client_id,
             issuer=settings.oidc_issuer_url,
+            # Audience checked manually below: Keycloak access tokens default to
+            # aud="account" and carry the requesting client in "azp" unless an
+            # Audience protocol mapper is configured on the client.
+            options={"verify_aud": False},
         )
+
+        # Bind the token to our client without requiring a Keycloak audience
+        # mapper on every deployment: accept it when the configured client_id is
+        # in the audience (mapper present) OR is the authorized party (azp, the
+        # default Keycloak shape). Tokens issued for another realm client are
+        # still rejected.
+        aud = payload.get("aud", [])
+        if isinstance(aud, str):
+            aud = [aud]
+        azp = payload.get("azp", "")
+        if settings.oidc_client_id not in aud and azp != settings.oidc_client_id:
+            logger.warning(
+                "Token audience mismatch: expected client_id=%r, token aud=%r azp=%r iss=%r",
+                settings.oidc_client_id, aud, azp, payload.get("iss"),
+            )
+            raise HTTPException(status_code=401, detail="Invalid token: Invalid audience")
+
         return payload
 
     except JWTError as e:
