@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Header } from "@codegouvfr/react-dsfr/Header";
 import { Footer } from "@codegouvfr/react-dsfr/Footer";
 import VaultPage from "./pages/VaultPage";
@@ -13,9 +13,11 @@ import GuidePage from "./pages/GuidePage";
 import SecurityPage from "./pages/SecurityPage";
 import { SecurityProvider } from "./services/security-context";
 import { login, logout, getUser, handleCallback, type User } from "./services/auth";
+import { userApi } from "./services/api";
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,6 +39,17 @@ function App() {
         .finally(() => setLoading(false));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load the admin flag from the backend profile (authoritative source).
+  useEffect(() => {
+    if (user && !user.expired) {
+      userApi.getProfile()
+        .then((p) => setIsAdmin(p.is_admin))
+        .catch(() => setIsAdmin(false));
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
 
   const [loginError, setLoginError] = useState("");
 
@@ -146,7 +159,9 @@ function App() {
           { text: "Mes applications", linkProps: { href: "/" }, isActive: isAppsSection },
           { text: "Coffre personnel", linkProps: { href: "/personal" }, isActive: isPersonalSection },
           { text: "Sécurité", linkProps: { href: "/security" }, isActive: isSecuritySection },
-          { text: "Administration", linkProps: { href: "/admin" }, isActive: isAdminSection },
+          ...(isAdmin
+            ? [{ text: "Administration", linkProps: { href: "/admin" }, isActive: isAdminSection }]
+            : []),
           { text: "Aide", linkProps: { href: "/guide" }, isActive: location.pathname === "/guide" },
         ]}
       />
@@ -158,10 +173,11 @@ function App() {
           <Route path="/security" element={<SecurityPage />} />
           <Route path="/app/:appSlug" element={<AppDetailPage />} />
           <Route path="/bridge/:appSlug" element={<BridgePage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/apps/new" element={<AdminAppFormPage />} />
-          <Route path="/admin/apps/:appId/edit" element={<AdminAppFormPage />} />
+          {isAdmin && <Route path="/admin" element={<AdminPage />} />}
+          {isAdmin && <Route path="/admin/apps/new" element={<AdminAppFormPage />} />}
+          {isAdmin && <Route path="/admin/apps/:appId/edit" element={<AdminAppFormPage />} />}
           <Route path="/guide" element={<GuidePage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
 
