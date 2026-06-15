@@ -47,7 +47,7 @@ async def create_personal_entry(
         website=body.website,
         username=encrypt_value(body.username, user.user_id, mp_key) if body.username else "",
         encrypted_password=encrypt_value(body.password, user.user_id, mp_key) if body.password else "",
-        notes=body.notes,
+        notes=encrypt_value(body.notes, user.user_id, mp_key) if body.notes else "",
     )
     db.add(entry)
     await db.flush()
@@ -75,7 +75,7 @@ async def update_personal_entry(
     if body.password is not None:
         entry.encrypted_password = encrypt_value(body.password, user.user_id, mp_key) if body.password else ""
     if body.notes is not None:
-        entry.notes = body.notes
+        entry.notes = encrypt_value(body.notes, user.user_id, mp_key) if body.notes else ""
 
     await db.flush()
     log_secret_access(user.user_id, f"personal:{entry.id}", "UPDATE")
@@ -111,6 +111,20 @@ async def _get_own_entry(
     return entry
 
 
+def _safe_decrypt(value: str, user_id: str, mp_key: bytes | None) -> str:
+    """Decrypt a value, falling back to the raw string for legacy plaintext.
+
+    Pre-encryption `notes` were stored in clear; those cannot be decrypted and
+    are returned as-is. New values are encrypted and decrypt normally.
+    """
+    if not value:
+        return ""
+    try:
+        return decrypt_value(value, user_id, mp_key)
+    except Exception:
+        return value
+
+
 def _decrypt_entry(entry: PersonalEntry, user_id: str, mp_key: bytes | None) -> dict:
     return {
         "id": entry.id,
@@ -118,7 +132,7 @@ def _decrypt_entry(entry: PersonalEntry, user_id: str, mp_key: bytes | None) -> 
         "website": entry.website,
         "username": decrypt_value(entry.username, user_id, mp_key) if entry.username else "",
         "password": decrypt_value(entry.encrypted_password, user_id, mp_key) if entry.encrypted_password else "",
-        "notes": entry.notes,
+        "notes": _safe_decrypt(entry.notes, user_id, mp_key),
         "created_at": entry.created_at,
         "updated_at": entry.updated_at,
     }
