@@ -22,6 +22,18 @@ class Settings(BaseSettings):
     myvault_master_key: str = "changeme_generate_with_openssl_rand_hex_32"
     myvault_jwt_secret: str = "changeme_jwt_secret"
 
+    # Shared secret required to auto-enroll an application (M2M). When empty,
+    # enrollment is disabled (returns 503) — never anonymous.
+    myvault_enroll_secret: str = ""
+
+    # Comma-separated hostnames allowed as outbound targets for connection
+    # tests even if they resolve to a private address (anti-SSRF allow-list).
+    myvault_ssrf_allow_hosts: str = ""
+
+    @property
+    def ssrf_allow_hosts(self) -> set[str]:
+        return {h.strip().lower() for h in self.myvault_ssrf_allow_hosts.split(",") if h.strip()}
+
     # OIDC / Keycloak — realm "openwebui" (owuicore-main)
     # OIDC_ISSUER_URL: public URL (what the browser sees, used as JWT issuer claim)
     oidc_issuer_url: str = "http://localhost:8082/realms/openwebui"

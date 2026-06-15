@@ -1,11 +1,14 @@
 """Routes for authenticated users to manage their own vault entries."""
 
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.core.database import get_db
 from app.core.master_password import require_vault_key
+from app.core.ssrf import SSRFError, validate_outbound_url
 from app.models.schemas import EntryResponse, EntrySave
 from app.services import vault_service
 
@@ -108,9 +111,12 @@ async def check_my_connection(
     # If app has a custom check endpoint, use it
     if app.check_connection_endpoint:
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            await asyncio.to_thread(validate_outbound_url, app.check_connection_endpoint)
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=False) as client:
                 resp = await client.post(app.check_connection_endpoint, json=values)
                 result = resp.json()
+        except SSRFError as e:
+            result = {"status": "error", "detail": str(e)}
         except Exception as e:
             result = {"status": "error", "detail": str(e)}
     else:
@@ -140,12 +146,17 @@ async def _generic_api_check(app, values: dict) -> dict:
         return {"status": "error", "detail": "Aucune URL API configurée"}
 
     try:
+        await asyncio.to_thread(validate_outbound_url, api_url)
+    except SSRFError as e:
+        return {"status": "error", "detail": str(e)}
+
+    try:
         headers = {}
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(api_url, headers=headers, follow_redirects=True)
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=False) as client:
+            resp = await client.get(api_url, headers=headers)
 
         if resp.status_code < 400:
             return {"status": "ok", "detail": f"API joignable ({resp.status_code})"}
