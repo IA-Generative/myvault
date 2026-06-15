@@ -1,11 +1,12 @@
 """Routes for machine-to-machine access (tools reading user secrets via client_credentials)."""
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import validate_client_credentials
 from app.core.database import get_db
 from app.core.master_password import get_session_key, get_user_security
+from app.core.ratelimit import limiter
 from app.models.schemas import EnrollRequest
 from app.services import app_service, vault_service
 
@@ -25,7 +26,9 @@ async def _authenticate_client(
 
 
 @router.get("/vault/{app_slug}/user/{user_id}")
+@limiter.limit("60/minute")
 async def read_user_credentials(
+    request: Request,
     app_slug: str,
     user_id: str,
     x_client_id: str = Header(...),
@@ -72,11 +75,31 @@ async def read_user_credentials(
 
 
 @router.post("/apps/enroll")
+@limiter.limit("10/minute")
 async def enroll_application(
+    request: Request,
     body: EnrollRequest,
+    x_enroll_secret: str = Header(default=""),
     db: AsyncSession = Depends(get_db),
 ):
-    """Auto-enroll an application (called by tools on first use)."""
+    """Enroll an application. Requires a shared enrollment secret.
+
+    Enrollment is disabled (503) unless MYVAULT_ENROLL_SECRET is configured;
+    when set, callers must present it via the X-Enroll-Secret header. This
+    closes anonymous self-enrollment (finding #1).
+    """
+    import secrets as _secrets
+
+    from app.core.config import settings
+
+    if not settings.myvault_enroll_secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Enrollment is disabled (no enrollment secret configured)",
+        )
+    if not _secrets.compare_digest(x_enroll_secret, settings.myvault_enroll_secret):
+        raise HTTPException(status_code=401, detail="Invalid enrollment secret")
+
     # Validate the client_secret is provided
     if not body.client_secret:
         raise HTTPException(status_code=400, detail="client_secret is required")
@@ -91,7 +114,9 @@ async def enroll_application(
 
 
 @router.get("/apps/{app_slug}/check/{user_id}")
+@limiter.limit("60/minute")
 async def check_user_credentials(
+    request: Request,
     app_slug: str,
     user_id: str,
     x_client_id: str = Header(...),

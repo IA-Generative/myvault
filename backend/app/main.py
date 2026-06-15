@@ -4,7 +4,10 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
 
+from app.core.ratelimit import limiter
 from app.api.admin_routes import router as admin_router
 from app.api.bridge_routes import router as bridge_router
 from app.api.health_routes import router as health_router
@@ -37,6 +40,9 @@ app = FastAPI(
     redoc_url="/api/redoc" if _docs_enabled else None,
     openapi_url="/api/openapi.json" if _docs_enabled else None,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,10 +1,11 @@
 """Routes for managing the user's master password (enable/disable/change/unlock)."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import log_secret_access
+from app.core.ratelimit import limiter
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.core.database import get_db
 from app.core.encryption import (
@@ -162,7 +163,9 @@ async def change_master_password(
 
 
 @router.post("/unlock", response_model=SecurityStatus)
+@limiter.limit("10/minute")
 async def unlock(
+    request: Request,
     body: MasterPasswordUnlock,
     user: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
