@@ -5,6 +5,7 @@
  */
 
 import SecretField from "./SecretField";
+import TotpField from "./TotpField";
 import type { VariableDefinition } from "../services/api";
 
 const SECRET_TYPES = new Set([
@@ -26,6 +27,19 @@ export default function VariableField({
 }: VariableFieldProps) {
   const { key, label, var_type, required, description, default_value, choices } = variable;
   const currentValue = value ?? default_value ?? "";
+
+  if (var_type === "totp") {
+    return (
+      <TotpField
+        label={label}
+        value={currentValue}
+        onChange={(v) => onChange(key, v)}
+        description={description}
+        required={required}
+        readOnly={readOnly}
+      />
+    );
+  }
 
   if (SECRET_TYPES.has(var_type)) {
     return (

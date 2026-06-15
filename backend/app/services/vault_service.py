@@ -9,8 +9,10 @@ from sqlalchemy.orm import selectinload
 
 from app.core.audit import log_secret_access
 from app.core.encryption import decrypt_value, encrypt_value
+from app.core.totp import current_code
 from app.models.database_models import (
     ENCRYPTED_TYPES,
+    TOTP_TYPES,
     Application,
     RequiredVariable,
     UserVaultEntry,
@@ -247,10 +249,19 @@ async def get_credentials_for_tool(
         return None
 
     encrypted_keys = _get_encrypted_keys(app)
+    totp_keys = _get_totp_keys(app)
     decrypted = {}
     for key, value in entry.values.items():
         if key in encrypted_keys and value:
-            decrypted[key] = decrypt_value(value, user_id, mp_key)
+            plain = decrypt_value(value, user_id, mp_key)
+            # Tools receive the current one-time code, never the TOTP seed.
+            if key in totp_keys:
+                try:
+                    decrypted[key] = current_code(plain)
+                except Exception:
+                    decrypted[key] = ""
+            else:
+                decrypted[key] = plain
         else:
             decrypted[key] = value
 
@@ -290,4 +301,10 @@ async def _get_app_by_slug(db: AsyncSession, slug: str) -> Application | None:
 def _get_encrypted_keys(app: Application) -> set[str]:
     return {
         v.key for v in app.required_variables if v.var_type in ENCRYPTED_TYPES
+    }
+
+
+def _get_totp_keys(app: Application) -> set[str]:
+    return {
+        v.key for v in app.required_variables if v.var_type in TOTP_TYPES
     }

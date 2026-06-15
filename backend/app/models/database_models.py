@@ -72,8 +72,11 @@ class RequiredVariable(Base):
     application: Mapped["Application"] = relationship(back_populates="required_variables")
 
 
-# Types that require encryption
-ENCRYPTED_TYPES = {"secret", "api_key", "login", "password", "oauth_token", "certificate"}
+# Types that require encryption. "totp" stores a TOTP seed (2FA shared secret).
+ENCRYPTED_TYPES = {"secret", "api_key", "login", "password", "oauth_token", "certificate", "totp"}
+
+# Variable types whose stored value is a TOTP seed (a live code is derived from it).
+TOTP_TYPES = {"totp"}
 
 
 class UserVaultEntry(Base):
