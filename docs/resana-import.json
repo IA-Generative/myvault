@@ -1,0 +1,16 @@
+{
+  "clients": [
+    {
+      "clientId": "myvault-resana",
+      "name": "Résana",
+      "secret": "",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "myvault.icon_url": "",
+        "myvault.check_endpoint": "",
+        "myvault.variables": "[{\"key\":\"app_url\",\"label\":\"URL Résana\",\"type\":\"url\",\"required\":true,\"default\":\"https://login.resana.numerique.gouv.fr/\",\"category\":\"manual\",\"description\":\"Page de connexion Résana\"},{\"key\":\"username\",\"label\":\"Identifiant\",\"type\":\"login\",\"required\":true,\"category\":\"manual\"},{\"key\":\"password\",\"label\":\"Mot de passe\",\"type\":\"password\",\"required\":true,\"category\":\"manual\"},{\"key\":\"otp_secret\",\"label\":\"Code 2FA (TOTP)\",\"type\":\"totp\",\"required\":false,\"category\":\"manual\",\"description\":\"Clé secrète affichée lors de l'activation de la double authentification Résana (base32 ou otpauth://)\"}]"
+      }
+    }
+  ]
+}
