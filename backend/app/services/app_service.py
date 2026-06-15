@@ -4,6 +4,7 @@ import json
 import secrets
 import uuid
 
+from passlib.hash import bcrypt
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -19,12 +20,17 @@ from app.models.schemas import (
 
 
 async def create_app(db: AsyncSession, data: AppCreate, created_by: str) -> Application:
-    """Create a new application with its required variables."""
+    """Create a new application with its required variables.
+
+    The client secret is stored as a bcrypt hash. The cleartext is exposed once
+    on the returned object (transient `plaintext_secret`) so the caller can show
+    it to the operator; it is never persisted in clear.
+    """
     client_secret = data.client_secret or secrets.token_urlsafe(32)
 
     app = Application(
         client_id=data.client_id,
-        client_secret=client_secret,
+        client_secret=bcrypt.hash(client_secret),
         name=data.name,
         description=data.description,
         icon_url=data.icon_url,
@@ -52,6 +58,8 @@ async def create_app(db: AsyncSession, data: AppCreate, created_by: str) -> Appl
         db.add(rv)
 
     await db.flush()
+    # Transient (not a column): cleartext shown once to the caller.
+    app.plaintext_secret = client_secret
     return app
 
 
@@ -233,7 +241,9 @@ async def export_keycloak(db: AsyncSession) -> dict:
         clients.append({
             "clientId": app.client_id,
             "name": app.name,
-            "secret": app.client_secret,
+            # Secrets are stored hashed and never exported in clear; rotate and
+            # re-provision on import.
+            "secret": "",
             "enabled": app.status == "active",
             "protocol": "openid-connect",
             "attributes": {

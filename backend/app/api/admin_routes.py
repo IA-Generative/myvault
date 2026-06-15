@@ -21,7 +21,14 @@ async def create_application(
 ):
     """Create a new application."""
     app = await app_service.create_app(db, body, created_by=admin.user_id)
-    return {"id": app.id, "friendly_slug": app.friendly_slug, "status": "created"}
+    # client_secret is shown once here; it is stored hashed and not retrievable later.
+    return {
+        "id": app.id,
+        "friendly_slug": app.friendly_slug,
+        "status": "created",
+        "client_id": app.client_id,
+        "client_secret": getattr(app, "plaintext_secret", ""),
+    }
 
 
 @router.put("/apps/{app_id}")

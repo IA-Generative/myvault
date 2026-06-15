@@ -173,21 +173,51 @@ async def require_admin(
     return user
 
 
+def _looks_hashed(stored: str) -> bool:
+    """A bcrypt hash starts with the $2 marker; legacy secrets are plaintext."""
+    return stored.startswith("$2")
+
+
 async def validate_client_credentials(
     client_id: str, client_secret: str, db_session
 ) -> AuthenticatedClient | None:
-    """Validate client_credentials for machine-to-machine auth."""
-    from app.models.database_models import Application
+    """Validate client_credentials for machine-to-machine auth.
+
+    Secrets are stored as bcrypt hashes. Legacy plaintext secrets are still
+    accepted (constant-time comparison) and transparently upgraded to a hash on
+    first successful use, so no manual migration is required.
+    """
+    import secrets as _secrets
+
     from sqlalchemy import select
+    from passlib.hash import bcrypt
+
+    from app.models.database_models import Application
 
     result = await db_session.execute(
         select(Application).where(
             Application.client_id == client_id,
-            Application.client_secret == client_secret,
             Application.status == "active",
         )
     )
     app = result.scalar_one_or_none()
     if app is None:
+        # Still spend time to reduce timing oracle on client_id existence.
+        bcrypt.hash(client_secret)
+        return None
+
+    stored = app.client_secret or ""
+    if _looks_hashed(stored):
+        try:
+            ok = bcrypt.verify(client_secret, stored)
+        except ValueError:
+            ok = False
+    else:
+        ok = _secrets.compare_digest(client_secret, stored)
+        if ok:
+            # Opportunistic upgrade of a legacy plaintext secret.
+            app.client_secret = bcrypt.hash(client_secret)
+
+    if not ok:
         return None
     return AuthenticatedClient(client_id=client_id)
