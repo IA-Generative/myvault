@@ -6,6 +6,7 @@ kind: Kustomization
 
 resources:
   - configmap.yaml
+  # secrets.yaml est gitignoré : le créer localement depuis secrets.example.yaml
   - secrets.yaml
   - backend-deployment.yaml
   - frontend-deployment.yaml

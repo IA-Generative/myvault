@@ -45,8 +45,8 @@ jobs:
       POSTGRES_PORT: 5432
       POSTGRES_DB: myvault_test
       POSTGRES_USER: myvault
-      POSTGRES_PASSWORD: testpass
-      MYVAULT_MASTER_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      POSTGRES_PASSWORD: testpass # gitleaks:allow — valeur de test CI jetable
+      MYVAULT_MASTER_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" # gitleaks:allow — clé factice de test (_WEAK_MASTER_KEYS)
       MYVAULT_DEV_MODE: "true"
     steps:
       - uses: actions/checkout@v4
