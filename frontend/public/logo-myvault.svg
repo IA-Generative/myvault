@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="MyVault — coffre-fort de credentials">
+  <title>MyVault</title>
+  <!-- Porte du coffre-fort (bleu France) -->
+  <rect x="3" y="3" width="42" height="42" rx="9" fill="#000091"/>
+  <!-- Cadre intérieur de la porte -->
+  <rect x="8.5" y="8.5" width="31" height="31" rx="6.5" fill="none" stroke="#ffffff" stroke-width="1.4" opacity="0.45"/>
+  <!-- Volant de sûreté -->
+  <circle cx="24" cy="24" r="10.5" fill="none" stroke="#ffffff" stroke-width="2.6"/>
+  <!-- Branches du volant -->
+  <g stroke="#ffffff" stroke-width="2.6" stroke-linecap="round">
+    <line x1="24" y1="9.4" x2="24" y2="16.2"/>
+    <line x1="24" y1="31.8" x2="24" y2="38.6"/>
+    <line x1="9.4" y1="24" x2="16.2" y2="24"/>
+    <line x1="31.8" y1="24" x2="38.6" y2="24"/>
+  </g>
+  <!-- Serrure / trou de clé -->
+  <g fill="#ffffff">
+    <circle cx="24" cy="22.3" r="3.1"/>
+    <path d="M22.1 23.6 h3.8 l1.1 5.4 h-6 z"/>
+  </g>
+</svg>
