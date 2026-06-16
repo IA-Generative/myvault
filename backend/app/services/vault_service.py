@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,14 +14,11 @@ from app.models.database_models import (
     ENCRYPTED_TYPES,
     TOTP_TYPES,
     Application,
-    RequiredVariable,
     UserVaultEntry,
 )
 
 
-async def get_user_apps(
-    db: AsyncSession, user_id: str
-) -> list[dict]:
+async def get_user_apps(db: AsyncSession, user_id: str) -> list[dict]:
     """List all active applications with the user's configuration status."""
     result = await db.execute(
         select(Application)
@@ -39,30 +36,32 @@ async def get_user_apps(
     items = []
     for app in apps:
         entry = entries.get(app.id)
-        items.append({
-            "id": app.id,
-            "name": app.name,
-            "description": app.description,
-            "icon_url": app.icon_url,
-            "friendly_slug": app.friendly_slug,
-            "status": app.status,
-            "required_variables": [
-                {
-                    "key": v.key,
-                    "label": v.label,
-                    "var_type": v.var_type,
-                    "required": v.required,
-                    "description": v.description,
-                    "default_value": v.default_value,
-                    "choices": v.choices,
-                    "category": v.category,
-                }
-                for v in app.required_variables
-            ],
-            "user_configured": entry is not None,
-            "user_enabled": entry.enabled if entry else False,
-            "check_status": entry.check_status if entry else "untested",
-        })
+        items.append(
+            {
+                "id": app.id,
+                "name": app.name,
+                "description": app.description,
+                "icon_url": app.icon_url,
+                "friendly_slug": app.friendly_slug,
+                "status": app.status,
+                "required_variables": [
+                    {
+                        "key": v.key,
+                        "label": v.label,
+                        "var_type": v.var_type,
+                        "required": v.required,
+                        "description": v.description,
+                        "default_value": v.default_value,
+                        "choices": v.choices,
+                        "category": v.category,
+                    }
+                    for v in app.required_variables
+                ],
+                "user_configured": entry is not None,
+                "user_enabled": entry.enabled if entry else False,
+                "check_status": entry.check_status if entry else "untested",
+            }
+        )
     return items
 
 
@@ -114,11 +113,19 @@ async def save_user_entry(
     values: dict[str, str],
     enabled: bool,
     mp_key: bytes | None = None,
+    user_email: str | None = None,
 ) -> dict:
-    """Save or update a user's vault entry, encrypting secret fields."""
+    """Save or update a user's vault entry, encrypting secret fields.
+
+    ``user_email`` (when provided) is stored lowercased so M2M tools can later
+    resolve the OIDC subject from the OpenWebUI e-mail. It is also refreshed on
+    update, which backfills rows created before this column existed.
+    """
     app = await _get_app_by_slug(db, app_slug)
     if app is None:
         raise ValueError(f"Application '{app_slug}' not found")
+
+    normalized_email = user_email.strip().lower() if user_email else None
 
     encrypted_keys = _get_encrypted_keys(app)
     stored_values = {}
@@ -139,6 +146,7 @@ async def save_user_entry(
     if entry is None:
         entry = UserVaultEntry(
             user_id=user_id,
+            user_email=normalized_email,
             app_id=app.id,
             enabled=enabled,
             values=stored_values,
@@ -147,6 +155,8 @@ async def save_user_entry(
     else:
         entry.values = stored_values
         entry.enabled = enabled
+        if normalized_email:
+            entry.user_email = normalized_email
         entry.updated_at = datetime.now(timezone.utc)
 
     await db.flush()
@@ -166,9 +176,7 @@ async def save_user_entry(
     }
 
 
-async def toggle_entry(
-    db: AsyncSession, user_id: str, app_slug: str
-) -> bool:
+async def toggle_entry(db: AsyncSession, user_id: str, app_slug: str) -> bool:
     """Toggle the enabled state of a user's vault entry. Returns new state."""
     app = await _get_app_by_slug(db, app_slug)
     if app is None:
@@ -214,17 +222,19 @@ async def get_all_user_entries(
             else:
                 decrypted[key] = value
 
-        items.append({
-            "entry_id": entry.id,
-            "app_id": app.id,
-            "app_name": app.name,
-            "app_slug": app.friendly_slug,
-            "enabled": entry.enabled,
-            "values": decrypted,
-            "last_check": entry.last_check,
-            "check_status": entry.check_status,
-            "updated_at": entry.updated_at,
-        })
+        items.append(
+            {
+                "entry_id": entry.id,
+                "app_id": app.id,
+                "app_name": app.name,
+                "app_slug": app.friendly_slug,
+                "enabled": entry.enabled,
+                "values": decrypted,
+                "last_check": entry.last_check,
+                "check_status": entry.check_status,
+                "updated_at": entry.updated_at,
+            }
+        )
 
     return items
 
@@ -265,8 +275,29 @@ async def get_credentials_for_tool(
         else:
             decrypted[key] = value
 
-    log_secret_access(user_id, app_slug, "TOOL_READ", accessed_by=f"tool:{app.client_id}")
+    log_secret_access(
+        user_id, app_slug, "TOOL_READ", accessed_by=f"tool:{app.client_id}"
+    )
     return decrypted
+
+
+async def resolve_user_id_by_email(db: AsyncSession, email: str) -> str | None:
+    """Resolve the OIDC subject (user_id) from a user's e-mail.
+
+    Matches case-insensitively against the ``user_email`` recorded on save.
+    Returns ``None`` when no vault entry carries that e-mail (user never
+    configured anything, or predates the user_email column and hasn't re-saved).
+    """
+    normalized = (email or "").strip().lower()
+    if not normalized:
+        return None
+    result = await db.execute(
+        select(UserVaultEntry.user_id)
+        .where(func.lower(UserVaultEntry.user_email) == normalized)
+        .limit(1)
+    )
+    row = result.first()
+    return row[0] if row else None
 
 
 async def update_check_status(
@@ -299,12 +330,8 @@ async def _get_app_by_slug(db: AsyncSession, slug: str) -> Application | None:
 
 
 def _get_encrypted_keys(app: Application) -> set[str]:
-    return {
-        v.key for v in app.required_variables if v.var_type in ENCRYPTED_TYPES
-    }
+    return {v.key for v in app.required_variables if v.var_type in ENCRYPTED_TYPES}
 
 
 def _get_totp_keys(app: Application) -> set[str]:
-    return {
-        v.key for v in app.required_variables if v.var_type in TOTP_TYPES
-    }
+    return {v.key for v in app.required_variables if v.var_type in TOTP_TYPES}

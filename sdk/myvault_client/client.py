@@ -30,7 +30,9 @@ class MyVaultClient:
     ):
         self.base_url = (base_url or os.environ.get("MYVAULT_URL", "")).rstrip("/")
         self.client_id = client_id or os.environ.get("MYVAULT_CLIENT_ID", "")
-        self.client_secret = client_secret or os.environ.get("MYVAULT_CLIENT_SECRET", "")
+        self.client_secret = client_secret or os.environ.get(
+            "MYVAULT_CLIENT_SECRET", ""
+        )
         self.timeout = timeout
 
         if not self.base_url:
@@ -42,9 +44,7 @@ class MyVaultClient:
             "X-Client-Secret": self.client_secret,
         }
 
-    async def get_credentials(
-        self, app_id: str, user_id: str
-    ) -> Credentials:
+    async def get_credentials(self, app_id: str, user_id: str) -> Credentials:
         """Retrieve a user's decrypted credentials for an application.
 
         Args:
@@ -60,6 +60,38 @@ class MyVaultClient:
         """
         slug = app_id.replace("myvault-", "").replace("_", "-")
         url = f"{self.base_url}/api/v1/vault/{slug}/user/{user_id}"
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.get(url, headers=self._auth_headers())
+
+        if resp.status_code == 401:
+            raise AuthenticationError("Invalid client credentials")
+
+        if resp.status_code == 404:
+            data = resp.json()
+            action_url = ""
+            if isinstance(data.get("detail"), dict):
+                action_url = f"{self.base_url}{data['detail'].get('action_url', '')}"
+            raise CredentialsMissing(app_id, action_url=action_url)
+
+        if resp.status_code != 200:
+            raise MyVaultError(f"Unexpected response: {resp.status_code}")
+
+        return Credentials(values=resp.json())
+
+    async def get_credentials_by_email(self, app_id: str, email: str) -> Credentials:
+        """Retrieve a user's decrypted credentials by their e-mail address.
+
+        Mirrors :meth:`get_credentials` but resolves the user via the e-mail
+        recorded on save, for tools (such as the Resana connector) that only
+        receive the OpenWebUI e-mail and not the OIDC subject.
+
+        Raises:
+            CredentialsMissing: If no vault entry matches the e-mail.
+            AuthenticationError: If client credentials are invalid.
+        """
+        slug = app_id.replace("myvault-", "").replace("_", "-")
+        url = f"{self.base_url}/api/v1/vault/{slug}/by-email/{email}"
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             resp = await client.get(url, headers=self._auth_headers())
@@ -101,9 +133,7 @@ class MyVaultClient:
         resp.raise_for_status()
         return resp.json()
 
-    async def check_credentials(
-        self, app_id: str, user_id: str
-    ) -> bool:
+    async def check_credentials(self, app_id: str, user_id: str) -> bool:
         """Check if a user has valid credentials configured.
 
         Returns True if credentials are configured and enabled.
@@ -124,9 +154,7 @@ class MyVaultClient:
         """Get the URL where users can configure their credentials."""
         return f"{self.base_url}/app/{app_slug}"
 
-    def credentials_required_response(
-        self, app_slug: str, app_name: str = ""
-    ) -> dict:
+    def credentials_required_response(self, app_slug: str, app_name: str = "") -> dict:
         """Generate a standard response when credentials are missing.
 
         Use this in your tool's run() method to return a user-friendly

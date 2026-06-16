@@ -84,8 +84,25 @@ async def on_startup():
 
     # Always ensure tables exist (safe: CREATE TABLE IF NOT EXISTS)
     try:
+        from sqlalchemy import text
+
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            # Lightweight, idempotent migration: create_all never ALTERs an
+            # existing table, so add the user_email column for DBs provisioned
+            # before the by-email lookup feature. Safe to run on every startup.
+            await conn.execute(
+                text(
+                    "ALTER TABLE user_vault_entries "
+                    "ADD COLUMN IF NOT EXISTS user_email VARCHAR(255)"
+                )
+            )
+            await conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_user_vault_entries_user_email "
+                    "ON user_vault_entries (lower(user_email))"
+                )
+            )
         logger.info("Database tables verified/created")
     except Exception as e:
         logger.error("Failed to create tables: %s", e)
@@ -97,6 +114,7 @@ async def on_startup():
         # Pre-load OIDC JWKS so first request doesn't have to wait
         try:
             from app.core.auth import _fetch_jwks
+
             await _fetch_jwks()
             logger.info("OIDC JWKS loaded from %s", settings.oidc_jwks_base_url)
         except Exception as e:

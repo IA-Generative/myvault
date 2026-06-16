@@ -35,7 +35,9 @@ class Application(Base):
     status: Mapped[str] = mapped_column(String(20), default="active")
     check_connection_endpoint: Mapped[str] = mapped_column(String(512), default="")
     variable_aliases: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
     created_by: Mapped[str] = mapped_column(String(255), default="")
 
     required_variables: Mapped[list["RequiredVariable"]] = relationship(
@@ -69,11 +71,21 @@ class RequiredVariable(Base):
     category: Mapped[str] = mapped_column(String(10), default="both")
     sort_order: Mapped[int] = mapped_column(default=0)
 
-    application: Mapped["Application"] = relationship(back_populates="required_variables")
+    application: Mapped["Application"] = relationship(
+        back_populates="required_variables"
+    )
 
 
 # Types that require encryption. "totp" stores a TOTP seed (2FA shared secret).
-ENCRYPTED_TYPES = {"secret", "api_key", "login", "password", "oauth_token", "certificate", "totp"}
+ENCRYPTED_TYPES = {
+    "secret",
+    "api_key",
+    "login",
+    "password",
+    "oauth_token",
+    "certificate",
+    "totp",
+}
 
 # Variable types whose stored value is a TOTP seed (a live code is derived from it).
 TOTP_TYPES = {"totp"}
@@ -88,6 +100,13 @@ class UserVaultEntry(Base):
         UUID(as_uuid=True), primary_key=True, default=new_uuid
     )
     user_id: Mapped[str] = mapped_column(String(255), index=True)
+    # The user's e-mail (lowercased), captured from the JWT on save. Lets M2M
+    # tools that only know the OpenWebUI e-mail resolve the OIDC subject without
+    # a Keycloak admin round-trip. Nullable: legacy rows are backfilled on the
+    # user's next save.
+    user_email: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     app_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("applications.id", ondelete="CASCADE")
     )
@@ -118,7 +137,9 @@ class PersonalEntry(Base):
     username: Mapped[str] = mapped_column(Text, default="")
     encrypted_password: Mapped[str] = mapped_column(Text, default="")
     notes: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
@@ -138,7 +159,9 @@ class UserSecurity(Base):
     master_password_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     master_password_hash: Mapped[str] = mapped_column(Text, default="")
     master_password_salt: Mapped[str] = mapped_column(String(64), default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
