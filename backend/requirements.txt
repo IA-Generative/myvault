@@ -9,7 +9,7 @@ asyncpg==0.30.0
 alembic==1.14.0
 
 # Security & Auth
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.4.0
 cryptography==44.0.0
 passlib==1.7.4
 # bcrypt must stay <4.1: passlib 1.7.4's bcrypt backend breaks with bcrypt
