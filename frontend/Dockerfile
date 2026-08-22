@@ -16,7 +16,13 @@ ENV VITE_OIDC_CLIENT_ID=$VITE_OIDC_CLIENT_ID
 RUN npm run build
 
 FROM nginx:alpine
+ARG VITE_OIDC_AUTHORITY=""
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# L'origine du fournisseur d'identite entre dans la politique de securite de contenu.
+# Elle est deduite de la meme variable que le bundle : une seule source de verite.
+RUN origine=$(printf '%s' "$VITE_OIDC_AUTHORITY" | cut -d/ -f1-3) \
+ && sed -i "s|__OIDC_ORIGIN__|${origine}|" /etc/nginx/conf.d/default.conf \
+ && nginx -t -c /etc/nginx/nginx.conf
 EXPOSE 3000
 CMD ["nginx", "-g", "daemon off;"]
