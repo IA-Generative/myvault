@@ -32,6 +32,7 @@ class AuthenticatedUser:
 @dataclass
 class AuthenticatedClient:
     """Machine-to-machine client (client_credentials grant)."""
+
     client_id: str
 
 
@@ -119,9 +120,14 @@ def _decode_token(token: str) -> dict:
         if settings.oidc_client_id not in aud and azp != settings.oidc_client_id:
             logger.warning(
                 "Token audience mismatch: expected client_id=%r, token aud=%r azp=%r iss=%r",
-                settings.oidc_client_id, aud, azp, payload.get("iss"),
+                settings.oidc_client_id,
+                aud,
+                azp,
+                payload.get("iss"),
             )
-            raise HTTPException(status_code=401, detail="Invalid token: Invalid audience")
+            raise HTTPException(
+                status_code=401, detail="Invalid token: Invalid audience"
+            )
 
         return payload
 
@@ -155,6 +161,24 @@ async def get_current_user(
         .get("roles", [])
     )
     all_roles = list(set(roles + client_roles))
+
+    # Restriction d'acces a un groupe du realm, si elle est demandee. Le claim
+    # `groups` porte le NOM FEUILLE des groupes (mapper Keycloak full.path=false),
+    # jamais leur chemin : on compare a un nom, pas a un « /chemin/groupe ».
+    exige = settings.myvault_groupe_exige.strip()
+    if exige:
+        brut = payload.get("groups", [])
+        groupes = brut if isinstance(brut, list) else [brut]
+        if exige not in [str(g) for g in groupes]:
+            # Tracer le refus sans nommer la personne : le motif suffit au diagnostic.
+            logger.warning(
+                "Acces refuse : le jeton ne porte pas le groupe requis (%d groupe(s) presente(s))",
+                len(groupes),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access restricted to authorized group members",
+            )
 
     return AuthenticatedUser(
         user_id=payload["sub"],

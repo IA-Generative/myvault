@@ -32,7 +32,11 @@ class Settings(BaseSettings):
 
     @property
     def ssrf_allow_hosts(self) -> set[str]:
-        return {h.strip().lower() for h in self.myvault_ssrf_allow_hosts.split(",") if h.strip()}
+        return {
+            h.strip().lower()
+            for h in self.myvault_ssrf_allow_hosts.split(",")
+            if h.strip()
+        }
 
     # OIDC / Keycloak — realm "openwebui" (owuicore-main)
     # OIDC_ISSUER_URL: public URL (what the browser sees, used as JWT issuer claim)
@@ -42,6 +46,11 @@ class Settings(BaseSettings):
     oidc_client_id: str = "myvault"
     oidc_client_secret: str = ""
     oidc_admin_role: str = "myvault-admin"
+
+    # Restriction d'acces a un groupe du realm. Vide = aucune restriction, tout
+    # utilisateur authentifie entre (comportement historique). Renseigne, seuls
+    # les porteurs du groupe nomme dans le claim `groups` sont admis.
+    myvault_groupe_exige: str = ""
 
     @property
     def oidc_jwks_base_url(self) -> str:
