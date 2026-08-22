@@ -180,8 +180,23 @@ async def get_current_user(
                 detail="Access restricted to authorized group members",
             )
 
+    claim = settings.myvault_claim_identite
+    identifiant = payload.get(claim)
+    if not identifiant:
+        # Diagnostic explicite plutot qu'un KeyError transforme en 500 : dire QUEL
+        # claim manque, et lesquels sont presents, epargne une heure de recherche.
+        logger.error(
+            "Jeton sans claim d'identite « %s ». Claims presents : %s",
+            claim,
+            ", ".join(sorted(payload.keys())),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token has no usable identity claim ({claim})",
+        )
+
     return AuthenticatedUser(
-        user_id=payload["sub"],
+        user_id=identifiant,
         email=payload.get("email", ""),
         name=payload.get("name", payload.get("preferred_username", "")),
         roles=all_roles,
