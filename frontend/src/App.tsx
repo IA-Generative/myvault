@@ -92,7 +92,7 @@ function App() {
           brandTop={<>RÉPUBLIQUE<br />FRANÇAISE</>}
           homeLinkProps={{ href: "/", title: "MyVault" }}
           operatorLogo={{ orientation: "vertical", imgUrl: "/logo-myvault.svg", alt: "MyVault" }}
-          serviceTitle={<>MyVault <span className="fr-badge fr-badge--sm fr-badge--green-emeraude">Beta</span></>}
+          serviceTitle="Mon coffre-fort"
           serviceTagline="Mon coffre-fort sécurisé"
           quickAccessItems={[
             {
@@ -140,7 +140,7 @@ function App() {
         brandTop={<>RÉPUBLIQUE<br />FRANÇAISE</>}
         homeLinkProps={{ href: "/", title: "MyVault" }}
         operatorLogo={{ orientation: "vertical", imgUrl: "/logo-myvault.svg", alt: "MyVault" }}
-        serviceTitle={<>MyVault <span className="fr-badge fr-badge--sm fr-badge--green-emeraude">Beta</span></>}
+        serviceTitle="Mon coffre-fort"
         serviceTagline="Mon coffre-fort sécurisé"
         quickAccessItems={[
           {
