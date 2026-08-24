@@ -22,5 +22,10 @@
       src="https://unpkg.com/@gouvfr/dsfr@1.11.2/dist/dsfr.nomodule.min.js"
     ></script>
     <script src="https://unpkg.com/@gouvfr/dsfr@1.11.2/dist/dsfr.module.min.js" type="module"></script>
+    <!-- Encart « État » de la bêta MirAI — repère commun aux huit services.
+         Servi en même origine par l'Ingress `/_beta` — rien à monter ici. Absent, la
+         page continue sans un mot grâce à `onerror`. C'est ce qui rend cette ligne
+         proposable telle quelle : elle n'ajoute aucune dépendance de construction. -->
+    <script src="/_beta/menu.js" onerror="void 0"></script>
   </body>
 </html>
