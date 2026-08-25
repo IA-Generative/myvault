@@ -15,6 +15,22 @@ import { SecurityProvider } from "./services/security-context";
 import { login, logout, getUser, handleCallback, type User } from "./services/auth";
 import { userApi } from "./services/api";
 
+// Rendue par le court-circuit /deconnexion, AVANT tout état d'authentification : elle doit
+// fonctionner session présente (id_token_hint) comme session déjà morte (Keycloak affiche
+// alors sa confirmation, et l'utilisateur revient — idempotent).
+function DeconnexionEnCours() {
+  useEffect(() => {
+    logout().catch(() => {
+      window.location.replace("/");
+    });
+  }, []);
+  return (
+    <div className="fr-container fr-my-4w">
+      <p>Déconnexion en cours…</p>
+    </div>
+  );
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -61,11 +77,24 @@ function App() {
     });
   }, []);
 
-  const handleLogout = useCallback(async () => {
-    await logout();
-  }, []);
-
   const userName = user?.profile?.name || user?.profile?.preferred_username || user?.profile?.email || "";
+
+  // L'identité alimente la bulle du menu commun de la bêta (elle n'est connue qu'après la
+  // résolution de la session, d'où l'événement plutôt qu'un window.MIRAI_MENU statique —
+  // et la CSP interdit de toute façon un <script> inline). Le `sub` sert au condensé des
+  // avis, jamais écrit en clair.
+  useEffect(() => {
+    if (user && !user.expired) {
+      try {
+        (window as any).MIRAI_MENU = Object.assign((window as any).MIRAI_MENU || {}, {
+          sub: user.profile?.sub || "",
+        });
+        document.dispatchEvent(new CustomEvent("mirai-menu:identite", {
+          detail: { nom: userName, mail: user.profile?.email || "" },
+        }));
+      } catch { /* le menu affichera « ? » */ }
+    }
+  }, [user, userName]);
 
   // Popup route — renders standalone, no header/footer
   if (location.pathname.startsWith("/popup/")) {
@@ -74,6 +103,14 @@ function App() {
         <Route path="/popup/:appSlug" element={<PopupCredentialsPage />} />
       </Routes>
     );
+  }
+
+  // Route de déconnexion — atteignable d'un simple lien : c'est elle que le menu commun
+  // de la bêta appelle (`sortie: '/deconnexion'`). `signoutRedirect()` vide le
+  // sessionStorage ET ferme la session Keycloak (id_token_hint quand il est encore là) ;
+  // une URL Keycloak nue laisserait l'application se croire connectée au retour.
+  if (location.pathname === "/deconnexion") {
+    return <DeconnexionEnCours />;
   }
 
   if (loading) {
@@ -136,27 +173,14 @@ function App() {
 
   return (
     <SecurityProvider>
+      {/* Le nom et « Se déconnecter » sont portés par le menu commun de la bêta (bulle en
+          haut à droite, sortie GET /deconnexion) : une seule commande de compte à l'écran. */}
       <Header
         brandTop={<>RÉPUBLIQUE<br />FRANÇAISE</>}
         homeLinkProps={{ href: "/", title: "MyVault" }}
         operatorLogo={{ orientation: "vertical", imgUrl: "/logo-myvault.svg", alt: "MyVault" }}
         serviceTitle="Mon coffre-fort"
         serviceTagline="Mon coffre-fort sécurisé"
-        quickAccessItems={[
-          {
-            iconId: "ri-account-circle-line" as const,
-            text: userName,
-            linkProps: { href: "#" },
-          },
-          {
-            iconId: "ri-logout-box-r-line" as const,
-            text: "Se déconnecter",
-            linkProps: {
-              href: "#",
-              onClick: (e: React.MouseEvent) => { e.preventDefault(); handleLogout(); },
-            },
-          },
-        ]}
         navigation={[
           { text: "Mes applications", linkProps: { href: "/" }, isActive: isAppsSection },
           { text: "Coffre personnel", linkProps: { href: "/personal" }, isActive: isPersonalSection },
