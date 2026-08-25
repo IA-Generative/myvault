@@ -131,17 +131,11 @@ function App() {
           operatorLogo={{ orientation: "vertical", imgUrl: "/logo-myvault.svg", alt: "MyVault" }}
           serviceTitle="Mon coffre-fort"
           serviceTagline="Mon coffre-fort sécurisé"
-          quickAccessItems={[
-            {
-              iconId: "ri-login-box-line" as const,
-              text: "Se connecter",
-              linkProps: {
-                href: "#",
-                onClick: (e: React.MouseEvent) => { e.preventDefault(); handleLogin(); },
-              },
-            },
-          ]}
         />
+        {/* Pas de « Se connecter » dans l'en-tête : react-dsfr pose les accès rapides à
+            y=42, exactement SOUS la barre du menu commun centrée à 44 px — la bulle le
+            recouvrait, visible et inerte (mesuré par elementFromPoint le 2026-08-25).
+            Le bouton central de la page suffit, et il est bien plus visible. */}
         <div className="fr-container fr-my-4w" style={{ textAlign: "center", padding: "4rem 0" }}>
           <h1>MyVault</h1>
           <p className="fr-text--lg fr-mb-3w">
