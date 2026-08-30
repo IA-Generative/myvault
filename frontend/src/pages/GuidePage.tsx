@@ -14,6 +14,7 @@ export default function GuidePage() {
           <li><a className="fr-summary__link" href="#configurer-outil">Configurer un outil</a></li>
           <li><a className="fr-summary__link" href="#activer-desactiver">Activer / Désactiver un outil</a></li>
           <li><a className="fr-summary__link" href="#redirection">Quand un outil me demande mes identifiants</a></li>
+          <li><a className="fr-summary__link" href="#automatisation">Autoriser une application à agir en mon nom</a></li>
           <li><a className="fr-summary__link" href="#securite">Sécurité</a></li>
           <li><a className="fr-summary__link" href="#faq">FAQ</a></li>
         </ol>
@@ -88,6 +89,37 @@ export default function GuidePage() {
         </p>
       </section>
 
+      <section id="automatisation" className="fr-mt-4w">
+        <h2>Autoriser une application à agir en mon nom</h2>
+        <p>
+          C'est la raison d'être du coffre-fort : vous <strong>autorisez une application à
+          se servir de vos identifiants</strong> pour des travaux d'automatisation, sans
+          jamais les lui recopier vous-même.
+        </p>
+        <p>
+          Concrètement, une fois vos accès renseignés et l'application <strong>activée</strong>,
+          il suffit de le demander en toutes lettres à <strong>Mon assistant</strong> ou
+          à <strong>Mes agents</strong> — par exemple « ouvre-moi une <em>issue</em> sur tel
+          dépôt GitHub », « dépose ce compte rendu dans Résana », « poste ce message dans
+          le salon Tchap de l'équipe ». L'outil sollicité vient chercher vos identifiants
+          dans le coffre au moment où il en a besoin, agit en votre nom, et rien n'est
+          recopié dans la conversation.
+        </p>
+        <div className="fr-callout">
+          <p className="fr-callout__text">
+            Toutes les applications ne le proposent pas encore : seules celles dont un outil
+            a été branché sur le coffre savent le faire. Les autres restent utiles pour
+            garder vos accès sous la main et ouvrir l'application avec vos identifiants
+            affichés.
+          </p>
+        </div>
+        <ul>
+          <li>Vous gardez la main : l'<strong>interrupteur</strong> de chaque application coupe l'accès des outils, immédiatement</li>
+          <li>Chaque lecture de vos secrets est <strong>tracée</strong> dans le journal d'audit</li>
+          <li>Une application ne peut lire que <strong>ses</strong> variables, jamais celles d'une autre</li>
+        </ul>
+      </section>
+
       <section id="securite" className="fr-mt-4w">
         <h2>Sécurité</h2>
         <div className="fr-callout fr-callout--green-emeraude">
@@ -99,6 +131,23 @@ export default function GuidePage() {
             pas même les administrateurs de la plateforme.
           </p>
         </div>
+        <p>
+          <strong>AES-256-GCM</strong> est le mode de chiffrement le plus solide dont on
+          dispose aujourd'hui. Deux choses le distinguent : une clé de <strong>256 bits</strong>,
+          hors de portée de la force brute, et surtout un chiffrement <strong>authentifié</strong> —
+          il ne se contente pas de rendre le secret illisible, il <em>détecte</em> la moindre
+          altération et refuse alors de le déchiffrer. C'est le mode qu'emploient les
+          standards actuels, à commencer par TLS 1.3, qui protège votre connexion à cette
+          page.{" "}
+          <a
+            className="fr-link"
+            href="https://fr.wikipedia.org/wiki/Mode_d%27op%C3%A9ration_(cryptographie)"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Comprendre les modes de chiffrement (Wikipédia)
+          </a>
+        </p>
         <ul>
           <li>Le chiffrement utilise une clé dérivée par utilisateur (HKDF-SHA256)</li>
           <li>Les communications sont protégées par TLS 1.3</li>
