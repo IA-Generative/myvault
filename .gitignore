@@ -11,6 +11,14 @@ deploy/k8s/**/secrets.yaml
 # Sorties locales sensibles (audit, homologation) — ne pas committer
 private/
 
+# Documents d'homologation produits (locaux)
+homologation-output/
+
+# ⚠ `.venv*/` et non `.venv/` : `backend/.venv-test/` (196 Mo) n'était couvert par
+#   AUCUNE ligne — un tiret de plus, et un `git add -A` l'embarquait. Constaté le
+#   2026-08-31 en balayant les dépôts du poste.
+.venv*/
+
 # === Private data (exports, seeds) ===
 data/
 *.key
