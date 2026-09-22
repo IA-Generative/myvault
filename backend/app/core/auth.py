@@ -1,6 +1,8 @@
 """Authentication: OIDC token validation and dev-mode bypass."""
 
+import hashlib
 import logging
+import time
 from dataclasses import dataclass
 
 import httpx
@@ -32,6 +34,7 @@ class AuthenticatedUser:
 @dataclass
 class AuthenticatedClient:
     """Machine-to-machine client (client_credentials grant)."""
+
     client_id: str
 
 
@@ -119,14 +122,66 @@ def _decode_token(token: str) -> dict:
         if settings.oidc_client_id not in aud and azp != settings.oidc_client_id:
             logger.warning(
                 "Token audience mismatch: expected client_id=%r, token aud=%r azp=%r iss=%r",
-                settings.oidc_client_id, aud, azp, payload.get("iss"),
+                settings.oidc_client_id,
+                aud,
+                azp,
+                payload.get("iss"),
             )
-            raise HTTPException(status_code=401, detail="Invalid token: Invalid audience")
+            raise HTTPException(
+                status_code=401, detail="Invalid token: Invalid audience"
+            )
 
         return payload
 
     except JWTError as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+
+
+# Identifiants resolus via /userinfo, avec une duree de vie courte : on evite un appel
+# au fournisseur d'identite a chaque requete sans jamais garder une reponse perimee.
+_sub_par_jeton: dict[str, tuple[str, float]] = {}
+_SUB_CACHE_TTL = 300.0
+
+
+async def _sub_depuis_userinfo(jeton: str) -> str | None:
+    """Recupere le `sub` aupres du point /userinfo.
+
+    Certains fournisseurs n'emettent pas `sub` dans le jeton d'acces. OpenID Connect
+    garantit en revanche que /userinfo le renvoie TOUJOURS : c'est donc la source
+    normale, et elle donne le meme identifiant immuable — pas un substitut.
+    """
+    empreinte = hashlib.sha256(jeton.encode()).hexdigest()
+    maintenant = time.time()
+    connu = _sub_par_jeton.get(empreinte)
+    if connu and connu[1] > maintenant:
+        return connu[0]
+
+    try:
+        config = await _fetch_oidc_config()
+        url = config.get("userinfo_endpoint")
+        if not url:
+            return None
+        # Meme substitution d'hote que pour la JWKS quand un acces interne est configure.
+        if settings.oidc_internal_url:
+            url = url.replace(
+                settings.oidc_issuer_url.rsplit("/realms/", 1)[0],
+                settings.oidc_internal_url.rsplit("/realms/", 1)[0],
+            )
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url, headers={"Authorization": f"Bearer {jeton}"})
+        if resp.status_code != 200:
+            logger.warning("/userinfo a repondu %s", resp.status_code)
+            return None
+        sub = resp.json().get("sub")
+    except Exception as e:  # noqa: BLE001 - une panne du fournisseur ne doit pas masquer sa cause
+        logger.warning("Impossible d'interroger /userinfo : %s", e)
+        return None
+
+    if sub:
+        if len(_sub_par_jeton) > 2000:
+            _sub_par_jeton.clear()
+        _sub_par_jeton[empreinte] = (sub, maintenant + _SUB_CACHE_TTL)
+    return sub
 
 
 async def get_current_user(
@@ -156,8 +211,45 @@ async def get_current_user(
     )
     all_roles = list(set(roles + client_roles))
 
+    # Restriction d'acces a un groupe du realm, si elle est demandee. Le claim
+    # `groups` porte le NOM FEUILLE des groupes (mapper Keycloak full.path=false),
+    # jamais leur chemin : on compare a un nom, pas a un « /chemin/groupe ».
+    exige = settings.myvault_groupe_exige.strip()
+    if exige:
+        brut = payload.get("groups", [])
+        groupes = brut if isinstance(brut, list) else [brut]
+        if exige not in [str(g) for g in groupes]:
+            # Tracer le refus sans nommer la personne : le motif suffit au diagnostic.
+            logger.warning(
+                "Acces refuse : le jeton ne porte pas le groupe requis (%d groupe(s) presente(s))",
+                len(groupes),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access restricted to authorized group members",
+            )
+
+    claim = settings.myvault_claim_identite
+    identifiant = payload.get(claim)
+    if not identifiant and claim == "sub":
+        # Le jeton d'acces n'a pas de `sub` : on le demande au fournisseur, qui est
+        # tenu de le fournir. L'identifiant obtenu est le meme, et il est immuable.
+        identifiant = await _sub_depuis_userinfo(credentials.credentials)
+    if not identifiant:
+        # Diagnostic explicite plutot qu'un KeyError transforme en 500 : dire QUEL
+        # claim manque, et lesquels sont presents, epargne une heure de recherche.
+        logger.error(
+            "Jeton sans claim d'identite « %s ». Claims presents : %s",
+            claim,
+            ", ".join(sorted(payload.keys())),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token has no usable identity claim ({claim})",
+        )
+
     return AuthenticatedUser(
-        user_id=payload["sub"],
+        user_id=identifiant,
         email=payload.get("email", ""),
         name=payload.get("name", payload.get("preferred_username", "")),
         roles=all_roles,

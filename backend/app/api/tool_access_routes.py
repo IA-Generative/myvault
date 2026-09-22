@@ -25,27 +25,22 @@ async def _authenticate_client(
     return client
 
 
-@router.get("/vault/{app_slug}/user/{user_id}")
-@limiter.limit("60/minute")
-async def read_user_credentials(
-    request: Request,
-    app_slug: str,
-    user_id: str,
-    x_client_id: str = Header(...),
-    x_client_secret: str = Header(...),
-    db: AsyncSession = Depends(get_db),
-):
-    """Read a user's decrypted credentials for a tool (machine-to-machine)."""
-    client = await _authenticate_client(x_client_id, x_client_secret, db)
-
-    # A client may only read credentials for its OWN application.
+async def _authorize_app_for_client(db, app_slug, client):
+    """Return the app if the authenticated client owns it, else raise 403."""
     app = await app_service.get_app_by_slug(db, app_slug)
     if app is None or app.client_id != client.client_id:
         raise HTTPException(
             status_code=403,
             detail="Client not authorized for this application",
         )
+    return app
 
+
+async def _read_credentials_for_user(db, app_slug, user_id):
+    """Shared M2M read: enforce the master-password gate then decrypt.
+
+    Raises 423 if the vault is locked and 404 if the user has no credentials.
+    """
     # If the user has enabled a master password, the tool can only read
     # credentials while the user has an active unlock session.
     sec = await get_user_security(db, user_id)
@@ -72,6 +67,55 @@ async def read_user_credentials(
             },
         )
     return creds
+
+
+@router.get("/vault/{app_slug}/user/{user_id}")
+@limiter.limit("60/minute")
+async def read_user_credentials(
+    request: Request,
+    app_slug: str,
+    user_id: str,
+    x_client_id: str = Header(...),
+    x_client_secret: str = Header(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Read a user's decrypted credentials for a tool (machine-to-machine)."""
+    client = await _authenticate_client(x_client_id, x_client_secret, db)
+    await _authorize_app_for_client(db, app_slug, client)
+    return await _read_credentials_for_user(db, app_slug, user_id)
+
+
+@router.get("/vault/{app_slug}/by-email/{email}")
+@limiter.limit("60/minute")
+async def read_user_credentials_by_email(
+    request: Request,
+    app_slug: str,
+    email: str,
+    x_client_id: str = Header(...),
+    x_client_secret: str = Header(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Read credentials by the user's e-mail rather than their OIDC subject.
+
+    Lets tools that only receive the OpenWebUI e-mail (e.g. the Resana
+    connector) fetch credentials without a Keycloak admin lookup. The e-mail is
+    resolved to the user_id recorded when the user saved their vault entry; if
+    no entry carries that e-mail the response is 404 with the config action URL.
+    """
+    client = await _authenticate_client(x_client_id, x_client_secret, db)
+    await _authorize_app_for_client(db, app_slug, client)
+
+    user_id = await vault_service.resolve_user_id_by_email(db, email)
+    if user_id is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "credentials_not_found",
+                "message": "No vault entry found for this e-mail",
+                "action_url": f"/app/{app_slug}",
+            },
+        )
+    return await _read_credentials_for_user(db, app_slug, user_id)
 
 
 @router.post("/apps/enroll")
@@ -125,15 +169,31 @@ async def check_user_credentials(
 ):
     """Check if a user has valid credentials for an app."""
     client = await _authenticate_client(x_client_id, x_client_secret, db)
+    await _authorize_app_for_client(db, app_slug, client)
 
-    # A client may only probe credentials for its OWN application.
-    app = await app_service.get_app_by_slug(db, app_slug)
-    if app is None or app.client_id != client.client_id:
-        raise HTTPException(
-            status_code=403,
-            detail="Client not authorized for this application",
-        )
+    creds = await vault_service.get_credentials_for_tool(db, app_slug, user_id)
+    if creds is None:
+        return {"configured": False, "enabled": False}
+    return {"configured": True, "enabled": True}
 
+
+@router.get("/apps/{app_slug}/check-email/{email}")
+@limiter.limit("60/minute")
+async def check_user_credentials_by_email(
+    request: Request,
+    app_slug: str,
+    email: str,
+    x_client_id: str = Header(...),
+    x_client_secret: str = Header(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Check whether a user (identified by e-mail) has valid credentials."""
+    client = await _authenticate_client(x_client_id, x_client_secret, db)
+    await _authorize_app_for_client(db, app_slug, client)
+
+    user_id = await vault_service.resolve_user_id_by_email(db, email)
+    if user_id is None:
+        return {"configured": False, "enabled": False}
     creds = await vault_service.get_credentials_for_tool(db, app_slug, user_id)
     if creds is None:
         return {"configured": False, "enabled": False}

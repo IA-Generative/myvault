@@ -9,7 +9,7 @@ from app.core.auth import AuthenticatedUser, get_current_user
 from app.core.database import get_db
 from app.core.master_password import require_vault_key
 from app.core.ssrf import SSRFError, validate_outbound_url
-from app.models.schemas import EntryResponse, EntrySave
+from app.models.schemas import EntrySave
 from app.services import vault_service
 
 router = APIRouter(prefix="/api/v1/me", tags=["User Vault"])
@@ -62,7 +62,13 @@ async def save_my_entry(
     """Save or update my credentials for an application."""
     try:
         return await vault_service.save_user_entry(
-            db, user.user_id, app_slug, body.values, body.enabled, mp_key
+            db,
+            user.user_id,
+            app_slug,
+            body.values,
+            body.enabled,
+            mp_key,
+            user_email=user.email,
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -111,8 +117,12 @@ async def check_my_connection(
     # If app has a custom check endpoint, use it
     if app.check_connection_endpoint:
         try:
-            await asyncio.to_thread(validate_outbound_url, app.check_connection_endpoint)
-            async with httpx.AsyncClient(timeout=10.0, follow_redirects=False) as client:
+            await asyncio.to_thread(
+                validate_outbound_url, app.check_connection_endpoint
+            )
+            async with httpx.AsyncClient(
+                timeout=10.0, follow_redirects=False
+            ) as client:
                 resp = await client.post(app.check_connection_endpoint, json=values)
                 result = resp.json()
         except SSRFError as e:
@@ -131,7 +141,6 @@ async def check_my_connection(
 async def _generic_api_check(app, values: dict) -> dict:
     """Try to reach the API endpoint with available credentials."""
     import httpx
-    from app.models.database_models import RequiredVariable
 
     # Find the API URL variable
     api_url = None
@@ -139,7 +148,11 @@ async def _generic_api_check(app, values: dict) -> dict:
     for v in app.required_variables:
         if v.category == "api" and v.var_type == "url" and values.get(v.key):
             api_url = values[v.key]
-        if v.category == "api" and v.var_type in ("api_key", "oauth_token") and values.get(v.key):
+        if (
+            v.category == "api"
+            and v.var_type in ("api_key", "oauth_token")
+            and values.get(v.key)
+        ):
             token = values[v.key]
 
     if not api_url:
@@ -161,9 +174,15 @@ async def _generic_api_check(app, values: dict) -> dict:
         if resp.status_code < 400:
             return {"status": "ok", "detail": f"API joignable ({resp.status_code})"}
         elif resp.status_code == 401:
-            return {"status": "error", "detail": "Authentification refusée (401) — vérifiez votre token"}
+            return {
+                "status": "error",
+                "detail": "Authentification refusée (401) — vérifiez votre token",
+            }
         elif resp.status_code == 403:
-            return {"status": "error", "detail": "Accès interdit (403) — vérifiez les permissions du token"}
+            return {
+                "status": "error",
+                "detail": "Accès interdit (403) — vérifiez les permissions du token",
+            }
         else:
             return {"status": "error", "detail": f"Réponse API : {resp.status_code}"}
     except httpx.ConnectError:

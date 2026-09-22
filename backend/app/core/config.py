@@ -32,7 +32,11 @@ class Settings(BaseSettings):
 
     @property
     def ssrf_allow_hosts(self) -> set[str]:
-        return {h.strip().lower() for h in self.myvault_ssrf_allow_hosts.split(",") if h.strip()}
+        return {
+            h.strip().lower()
+            for h in self.myvault_ssrf_allow_hosts.split(",")
+            if h.strip()
+        }
 
     # OIDC / Keycloak — realm "openwebui" (owuicore-main)
     # OIDC_ISSUER_URL: public URL (what the browser sees, used as JWT issuer claim)
@@ -42,6 +46,20 @@ class Settings(BaseSettings):
     oidc_client_id: str = "myvault"
     oidc_client_secret: str = ""
     oidc_admin_role: str = "myvault-admin"
+
+    # Restriction d'acces a un groupe du realm. Vide = aucune restriction, tout
+    # utilisateur authentifie entre (comportement historique). Renseigne, seuls
+    # les porteurs du groupe nomme dans le claim `groups` sont admis.
+    myvault_groupe_exige: str = ""
+
+    # Claim qui identifie durablement l'utilisateur. `sub` par defaut, comme le
+    # veut OpenID Connect. Certains fournisseurs n'emettent PAS `sub` dans le
+    # jeton d'acces (jetons allegs, mappers restreints) : l'application plantait
+    # alors en 500 sur un KeyError. Cette variable permet de nommer un autre
+    # claim -- au prix, a savoir, de sa stabilite : l'identifiant sert a deriver
+    # la cle de chiffrement de l'utilisateur, en changer rend ses secrets
+    # illisibles. Ne le changer que si le claim retenu ne bouge jamais.
+    myvault_claim_identite: str = "sub"
 
     @property
     def oidc_jwks_base_url(self) -> str:

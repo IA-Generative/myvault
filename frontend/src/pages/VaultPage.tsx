@@ -169,9 +169,19 @@ export default function VaultPage() {
           </button>
         </div>
       )}
-      <p className="fr-text--lg fr-mb-3w">
+      <p className="fr-text--lg fr-mb-2w">
         Configurez vos accès puis cliquez sur <strong>Ouvrir</strong> pour
         accéder à l'application avec vos identifiants à portée de main.
+      </p>
+      <p className="fr-mb-3w">
+        Vous pouvez aussi <strong>autoriser une application à se servir de vos
+        identifiants</strong> pour des travaux d'automatisation : une fois vos accès
+        renseignés et l'application activée, il suffit de le demander — en toutes lettres —
+        à <strong>Mon assistant</strong> ou à <strong>Mes agents</strong>, qui agiront en
+        votre nom sur celles des applications ci-dessous qui le proposent. Vos secrets
+        restent chiffrés en AES-256-GCM, l'outil ne les obtient qu'au moment où il s'en
+        sert, et désactiver une application lui coupe l'accès aussitôt.{" "}
+        <a className="fr-link" href="/guide">En savoir plus dans le guide</a>.
       </p>
 
       {apps.length === 0 ? (
